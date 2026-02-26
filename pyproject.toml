@@ -1,0 +1,19 @@
+[project]
+name = "ceartin-mp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "datasets>=4.5.0",
+    "evaluate[pytorch,torch]>=0.4.6",
+    "torch>=2.10.0",
+    "transformers[torch]>=5.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.1.0",
+    "isort>=8.0.0",
+    "pre-commit>=4.5.1",
+]

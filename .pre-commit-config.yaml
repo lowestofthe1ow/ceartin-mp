@@ -1,0 +1,31 @@
+# https://pre-commit.com/hooks.html
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+  - id: trailing-whitespace
+  - id: end-of-file-fixer
+  - id: check-yaml
+  - id: check-added-large-files
+  - id: check-merge-conflict
+
+# https://pycqa.github.io/isort/docs/configuration/pre-commit.html
+- repo: https://github.com/pycqa/isort
+  rev: 7.0.0
+  hooks:
+  - id: isort
+    args: ["--profile", "black"]
+
+# https://docs.astral.sh/uv/guides/integration/pre-commit/
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.10.4
+  hooks:
+  - id: uv-lock
+  - id: uv-export
+
+# https://black.readthedocs.io/en/stable/integrations/source_version_control.html
+- repo: https://github.com/psf/black-pre-commit-mirror
+  rev: 26.1.0
+  hooks:
+  - id: black
+    language_version: python3.12
