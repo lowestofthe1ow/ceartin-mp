@@ -1,4 +1,3 @@
-from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
     DataCollatorWithPadding,
@@ -7,6 +6,8 @@ from transformers import (
     TrainingArguments,
 )
 from transformers.optimization import Adafactor
+
+from datasets import load_dataset
 
 model_name = "jcblaise/roberta-tagalog-base"
 model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=2)
