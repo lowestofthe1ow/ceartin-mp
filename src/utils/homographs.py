@@ -31,8 +31,9 @@ def homographs(sentence):
     print(output_template)
 
     # Get a list of the pronunciations of all homographs in the sentence
-    choices = {
-        word: {
+    choices = [
+        {
+            "word": word,
             # Check if there's a match...
             "choices": HOMOGRAPHS.get(word, []),
             # Otherwise, fall back to root word
@@ -46,7 +47,7 @@ def homographs(sentence):
         }
         for word in words
         if word not in NON_HOMOGRAPHS_SET
-    }
+    ]
 
     return ambiguous_words, choices, output_template
 

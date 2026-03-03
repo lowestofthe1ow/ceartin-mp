@@ -1,24 +1,20 @@
 from string import Template
 
 # TODO: This is the current working prompt template...
-TEMPLATE_STR = """Provide the most accurate IPA transcription for the listed
-words given the context in the provided sentence, ensuring stress placement (')
-is correct based on Tagalog grammar and context.
-
-[WORD_LIST_START]
-$words
-[WORD_LIST_END]
-
-[SENTENCE_START]
+TEMPLATE_STR = """<sentence>
 $sentence
-[SENTENCE_END]
+</sentence>
 
-Instructions:
+<instructions>
+Provide the most accurate IPA transcription for the listed words given the
+context in the provided sentence, ensuring stress placement (') is correct based
+on Tagalog grammar and context.
 1. Selection criteria: If the correct pronunciation is in the provided options,
    select it exactly.
 2. Root & inflection handling: For words marked [ROOT], infer the IPA for the
-   FULL inflected word as it appears in the sentence. Note that stress typically
-   shifts when certain suffixes are added in Tagalog.
+   FULL inflected word as it appears in the sentence, based on the provided
+   root. Note that stress typically shifts when certain suffixes are added in
+   Tagalog. Be wary of repetition.
 3. Inference: For words marked [NO CHOICES], infer the IPA transcription based
    on standard Filipino pronunciation.
 4. Formatting rules:
@@ -26,10 +22,11 @@ Instructions:
     - Exclude prosodic markers (like tone) and syllable separators (dots).
     - Provide the response as a direct, comma-separated list of IPA strings in
     the exact order the words appear in the sentence.
+</instructions>
 
-[CHOICES_LIST_START]
+<word_choices>
 $pronunciations
-[CHOICES_LIST_END]
+</word_choices>
 """
 
 # TODO: Possible alternative prompt template
@@ -61,7 +58,7 @@ separated by commas.
 TEMPLATE = Template(TEMPLATE_STR)
 
 
-def _format_word_data(word, data):
+def _format_word_data(data):
     choices = data.get("choices")
 
     if choices:
@@ -75,7 +72,7 @@ def _format_word_data(word, data):
         print(root_prons)
         pron_str = f'[ROOT "{root_word}"] {root_prons}'
 
-    return f"{word}: {pron_str}"
+    return f"{data.get("word")}: {pron_str}"
 
 
 def generate_prompt(sentence, pronunciations, words):
@@ -84,7 +81,7 @@ def generate_prompt(sentence, pronunciations, words):
 
     # Show choices for each ambiguous word
     formatted_pronunciations = "\n".join(
-        _format_word_data(word, data) for word, data in pronunciations.items()
+        _format_word_data(data) for data in pronunciations
     )
 
     # Wrap in quotes
