@@ -69,7 +69,6 @@ def _format_word_data(data):
         root = data.get("root", {})
         root_word = root.get("word", "")
         root_prons = ", ".join(root.get("choices", []))
-        print(root_prons)
         pron_str = f'[ROOT "{root_word}"] {root_prons}'
 
     return f"{data.get("word")}: {pron_str}"
