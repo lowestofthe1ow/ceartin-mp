@@ -1,17 +1,28 @@
+# Stuff changed: 
+# changed Trainer to Seq2SeqTrainer and TrainingArguments to Seq2SeqTrainingArguments
+# changed model to encoderdecodermodel (idk if decoder model is same as encoder model)
+# changed datacollator to DataCollatorForSeq2Seq
+# preprocess_nli uses encoder decoder format
+
 from transformers import (
     AutoTokenizer,
     DataCollatorWithPadding,
-    RobertaForSequenceClassification,
-    Trainer,
-    TrainingArguments,
+    EncoderDecoderModel,
+    Seq2SeqTrainer,
+    Seq2SeqTrainingArguments,
 )
 from transformers.optimization import Adafactor
 
 from datasets import load_dataset
 
 model_name = "jcblaise/roberta-tagalog-base"
-model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=2)
+model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_name, model_name) # idk if encoder model and decoder model are same
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+# decoder config stuff 
+model.config.decoder_start_token_id = tokenizer.cls_token_id
+model.config.pad_token_id = tokenizer.pad_token_id
+model.config.vocab_size = model.config.encoder.vocab_size
 
 # ------------------------------------------------------------------------------
 # Load the dataset
@@ -20,18 +31,35 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 def preprocess_nli(examples):
     """Tokenizes NewsPH-NLI"""
-    return tokenizer(
+
+    inputs = tokenizer(
         examples["premise"],
         examples["hypothesis"],
         truncation=True,
-        padding="max_length",
-        max_length=128,
+        max_length=128
     )
+
+    # changing label to text 
+    targets = ["entailment" if l == 1 else "contradiction"
+               for l in examples["label"]]
+
+    # tokenize text
+    labels = tokenizer(
+        text_target=targets,
+        truncation=True,
+        max_length=8,
+    )
+
+    # attaching label to input
+    inputs["labels"] = labels["input_ids"]
+
+    return inputs
+
 
 
 dataset = load_dataset("jcblaise/newsph_nli")
 tokenized_dataset = dataset.map(preprocess_nli, batched=True)
-data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+data_collator = DataCollatorWithPadding(tokenizer=tokenizer, model=model)
 # ------------------------------------------------------------------------------
 
 # We define the Adafactor optimizer based on the following paper:
@@ -50,7 +78,7 @@ optimizer = Adafactor(
     warmup_init=False,
 )
 
-training_args = TrainingArguments(
+training_args = Seq2SeqTrainingArguments(
     output_dir="./models/checkpoints",
     # 8 physical batch size * 4 accumulation steps = 32
     per_device_train_batch_size=8,
@@ -68,7 +96,7 @@ training_args = TrainingArguments(
     save_total_limit=1,
 )
 
-trainer = Trainer(
+trainer = Seq2SeqTrainer(
     model=model,
     args=training_args,
     train_dataset=tokenized_dataset["train"].shuffle(seed=42).select(range(50000)),
