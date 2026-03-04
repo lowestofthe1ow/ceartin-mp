@@ -14,6 +14,7 @@ This project uses [`uv`](https://docs.astral.sh/uv/) to manage packages.
 
 1. Create a Python 3.12 virtual environment with `uv venv --python 3.12`.
 2. Run `uv sync` to install dependencies.
+3. Activate the virtual environment with `source .venv/bin/activate`.
 
 ### Set up `pre-commit`
 
