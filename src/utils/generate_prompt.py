@@ -1,7 +1,47 @@
 from string import Template
 
+# This list was obtained from WikiPron's scraped data.
+PHONEME_INVENTORY = [
+    "'",
+    "a",
+    "b",
+    "d",
+    "e",
+    "f",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "y",
+    "z",
+    "ŋ",
+    "ɕ",
+    "ə",
+    "ɡ",
+    "ɹ",  # NOTE: Only used by one word
+    "ɾ",
+    "ʃ",
+    "ʌ",
+    "ʒ",
+    "ʔ",
+    "ˈ",  # NOTE: Technically a "duplicate"
+    "ˌ",
+    # NOTE: We handle the tie bar with a special instruction
+    " ‍͡ (Tie bar: Unicode: U+0361)",
+]
+
 # TODO: This is the current working prompt template...
-TEMPLATE_STR = """<sentence>
+TEMPLATE_STR = f"""<sentence>
 $sentence
 </sentence>
 
@@ -14,46 +54,29 @@ on Tagalog grammar and context.
 2. Root & inflection handling: For words marked [ROOT], infer the IPA for the
    FULL inflected word as it appears in the sentence, based on the provided
    root. Note that stress typically shifts when certain suffixes are added in
-   Tagalog. Be wary of repetition.
+   Tagalog. Be careful not to accidentally merge repeated sounds. In the choices
+   provided, note that the stress marker (') is included at the start of the
+   stressed syllable.
 3. Inference: For words marked [NO CHOICES], infer the IPA transcription based
    on standard Filipino pronunciation.
 4. Formatting rules:
-    - Include stress markers (') at the beginning of the stressed syllable.
+    - Only include answers for the list of words given.
+    - Place stress markers (') at the beginning of the stressed syllable.
     - Exclude prosodic markers (like tone) and syllable separators (dots).
     - Provide the response as a direct, comma-separated list of IPA strings in
     the exact order the words appear in the sentence.
+    - You may use only the UTF-8 characters provided in the pphoneme inventory.
 </instructions>
 
-<word_choices>
+<phoneme_inventory>
+{PHONEME_INVENTORY}
+</phoneme_inventory>
+
+<word_list>
 $pronunciations
-</word_choices>
+</word_list>
 """
 
-# TODO: Possible alternative prompt template
-"""You are a grapheme-to-phoneme conversion system. The Tagalog word/s:
-
-$words
-
-in the sentence:
-
-$sentence
-
-has/have the following possible pronunciations:
-
-$pronunciations
-
-Select which pronunciations are best given the context of the sentence from the
-options provided. Make sure your response matches the selected choice perfectly,
-but only if the absolute correct prononciation is among the options. Otherwise,
-for words with [ROOT], infer the pronunciation of the FULL word, including
-inflections, based on the behavior shown in the choices for the root word
-(remember that stress can shift with inflections). For words with [NO CHOICES],
-infer the pronunciation. An apostrophe (') denotes the beginning of a stressed
-syllable.Exclude prosodic information except stress. Exclude syllable separators
-(dots) in your response. Your response must be direct and contain only your
-selections for each word in the same order they occur in the given sentence,
-separated by commas.
-"""
 
 TEMPLATE = Template(TEMPLATE_STR)
 

@@ -1,16 +1,20 @@
+import asyncio
 import json
-import time
-from typing import List
+import os
+from typing import List, Optional
 
-import pandas as pd
 from dotenv import dotenv_values
 from google import genai
 from pydantic import BaseModel
-from tqdm import tqdm
+from tqdm.asyncio import tqdm
 
 from datasets import load_dataset
 from src.utils.generate_prompt import generate_prompt
 from src.utils.homographs import homographs
+
+OUTPUT_FILENAME = "results_gemini_3.jsonl"
+MODEL_NAME = "gemini-3-flash-preview"
+CONCURRENCY_LIMIT = 80
 
 
 class Response(BaseModel):
@@ -19,84 +23,91 @@ class Response(BaseModel):
     answers: List[str]
 
 
-# Set up Gemini API
-config = dotenv_values(".env")
-key = config["GEMINI_API_KEY"]
-client = genai.Client(api_key=key)
+async def process_prompt(
+    index, prompt, client, MODEL_NAME, semaphore, output_file, file_lock
+):
+    """Sends prompts to Gemini concurrently and saves to a file."""
 
-# TODO: TLUnified dataset as alternative
-# dataset = load_dataset("ljvmiranda921/tlunified-ner", split="train")
-# sentences = [" ".join(item["tokens"]) for item in dataset]
+    result_entry = {"index": index, "success": False, "content": None, "error": None}
 
-# Load and process the Tatoeba dataset
-dataset = load_dataset("tatoeba", "en-tl", lang1="en", lang2="tl")
-sentences = [item["tl"] for item in dataset["train"]["translation"]]
+    if not prompt:
+        # This will happen if there were no ambiguous words.
+        result_entry["error"] = "ERR_EMPTY_PROMPT"
+    else:
+        # Create a semaphore to limit concurrency
+        async with semaphore:
+            try:
+                response = await client.aio.models.generate_content(
+                    model=MODEL_NAME,
+                    contents=prompt,
+                    config={
+                        "response_mime_type": "application/json",
+                        "response_json_schema": Response.model_json_schema(),
+                    },
+                )
+
+                output = Response.model_validate_json(response.text)
+                result_entry["success"] = True
+                result_entry["content"] = output.model_dump()
+
+            except Exception as e:
+                result_entry["error"] = str(e)
+
+    async with file_lock:
+        # Write to file asynchronously
+        with open(output_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(result_entry, ensure_ascii=False) + "\n")
+
+    return result_entry
 
 
-def process_sentence(sentence):
-    """Processes each sentence in Tatoeba and generates a prompt"""
-    words, choices, _ = homographs(sentence)
-    return generate_prompt(sentence=sentence, pronunciations=choices, words=words)
+async def main():
+    # Set up Gemini API
+    config = dotenv_values(".env")
+    key = config.get("GEMINI_API_KEY")
+    client = genai.Client(api_key=key)
+
+    print("Loading Tatoeba dataset...")
+    dataset = load_dataset("tatoeba", "en-tl", lang1="en", lang2="tl")
+    sentences = [item["tl"] for item in dataset["train"]["translation"]]
+
+    # NOTE: Can test with a smaller batch first if needed
+    # sentences = sentences[:100]
+
+    print(f"{len(sentences)} loaded from dataset. Generating prompts...")
+    prompts = []
+    for s in sentences:
+        words, choices, _ = homographs(s)
+        if words:
+            prompts.append(
+                generate_prompt(sentence=s, pronunciations=choices, words=words)
+            )
+        else:
+            prompts.append(None)
+
+    semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
+    file_lock = asyncio.Lock()
+
+    # Delete existing file if it exists...
+    open(OUTPUT_FILENAME, "w").close()
+
+    # Set concurrency limits
+    print(f"Concurrency limit: {CONCURRENCY_LIMIT}")
+    tasks = [
+        asyncio.create_task(
+            process_prompt(
+                i, prompt, client, MODEL_NAME, semaphore, OUTPUT_FILENAME, file_lock
+            )
+        )
+        for i, prompt in enumerate(prompts, start=1)
+    ]
+
+    # Process all tasks while showing an async progress bar
+    results = [await t for t in tqdm.as_completed(tasks, total=len(tasks))]
+
+    print("\n" + "=" * 40)
+    print(f"Saved results to {OUTPUT_FILENAME}.")
 
 
-prompts = [process_sentence(s) for s in tqdm(sentences)]
-# prompts = list(filter(None, prompts))
-
-# Generate batch requests to Gemini
-batch_requests = [
-    {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "config": {
-            "response_mime_type": "application/json",
-            "response_json_schema": Response.model_json_schema(),
-        },
-    }
-    for prompt in tqdm(prompts)
-]
-
-batch_job = client.batches.create(
-    model="gemini-3-flash-preview",
-    src=batch_requests,
-    config={
-        "display_name": "inlined-requests-job-1",
-    },
-)
-
-print(f"Created batch job: {batch_job.name}.")
-print("You may now exit this process, but it will poll the job's status.")
-
-# Constantly poll the job status
-while True:
-    batch_job_inline = client.batches.get(name=batch_job.name)
-    if batch_job_inline.state.name in (
-        "JOB_STATE_SUCCEEDED",
-        "JOB_STATE_FAILED",
-        "JOB_STATE_CANCELLED",
-        "JOB_STATE_EXPIRED",
-    ):
-        break
-
-    print(f"Job state: {batch_job_inline.state.name}. Waiting 30 seconds...")
-    time.sleep(30)
-
-# TODO: This part onwards could use some cleaning
-# Process the final responses.
-response_out = []
-for i, inline_response in enumerate(batch_job_inline.dest.inlined_responses, start=1):
-    result_entry = {"index": i, "success": False, "content": None, "error": None}
-
-    if inline_response.response:
-        result_entry["success"] = True
-        result_entry["content"] = inline_response.response.text
-    elif inline_response.error:
-        # TODO: Captures API errors
-        result_entry["error"] = str(inline_response.error)
-
-    response_out.append(result_entry)
-
-# Write to a JSON file.
-output_filename = "batch_results.json"
-with open(output_filename, "w", encoding="utf-8") as f:
-    json.dump(response_out, f, ensure_ascii=False, indent=4)
-
-print(f"All results saved to {output_filename}")
+if __name__ == "__main__":
+    asyncio.run(main())

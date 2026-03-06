@@ -23,3 +23,31 @@ def wikipron_tl_df(wikipron_path):
     print("=" * 40)
 
     return homographs, non_homographs
+
+
+if __name__ == "__main__":
+    # Allows passing the file path as a command-line argument, defaults to a placeholder
+
+    file_path = "data/wikipron/wikipron_tl.tsv"
+
+    homo_dict, non_homo_dict = wikipron_tl_df(file_path)
+
+    # 1. Collect all pronunciation strings into a single list
+    all_pronunciations = list(non_homo_dict.values())
+    for prons in homo_dict.values():
+        all_pronunciations.extend(prons)
+
+    # 2. Extract unique characters
+    phoneme_set = set()
+    for pron in all_pronunciations:
+        # Update the set with every character in the string, ignoring spaces
+        phoneme_set.update(char for char in pron if char != " ")
+
+    # 3. Sort for a cleaner output
+    phoneme_inventory = sorted(list(phoneme_set))
+
+    print("\n" + "=" * 40)
+    print("Phoneme Character Inventory:")
+    print("=" * 40)
+    print(f"Total unique characters: {len(phoneme_inventory)}")
+    print(phoneme_inventory)
