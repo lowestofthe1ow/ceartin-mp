@@ -18,8 +18,32 @@ def wikipron_tl_df(wikipron_path):
 
     print("=" * 40)
     print("Processed WikiPron Tagalog dataset.")
+    print("-" * 40)
     print(f"Homographs (unique): {len(homographs)}")
     print(f"Non-homographs: {len(non_homographs)}")
     print("=" * 40)
 
     return homographs, non_homographs
+
+
+if __name__ == "__main__":
+    file_path = "data/wikipron/wikipron_tl.tsv"
+    homo_dict, non_homo_dict = wikipron_tl_df(file_path)
+
+    all_pronunciations = list(non_homo_dict.values())
+    for prons in homo_dict.values():
+        all_pronunciations.extend(prons)
+
+    # Extract unique characters
+    phoneme_set = set()
+    for pron in all_pronunciations:
+        # Update the set with every character in the string, ignoring spaces
+        phoneme_set.update(char for char in pron if char != " ")
+
+    phoneme_inventory = sorted(list(phoneme_set))
+
+    print("=" * 40)
+    print("Phoneme Character Inventory:")
+    print("=" * 40)
+    print(f"Total unique characters: {len(phoneme_inventory)}")
+    print(phoneme_inventory)

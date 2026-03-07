@@ -217,6 +217,7 @@ dependencies = [
     { name = "google-genai" },
     { name = "tglstemmer" },
     { name = "torch" },
+    { name = "tqdm" },
     { name = "transformers", extra = ["torch"] },
 ]
 
@@ -235,6 +236,7 @@ requires-dist = [
     { name = "google-genai", specifier = ">=1.65.0" },
     { name = "tglstemmer", git = "https://github.com/andrianllmm/tagalog-stemmer.git?rev=main" },
     { name = "torch", specifier = ">=2.10.0" },
+    { name = "tqdm", specifier = ">=4.67.3" },
     { name = "transformers", extras = ["torch"], specifier = ">=5.2.0" },
 ]
 
