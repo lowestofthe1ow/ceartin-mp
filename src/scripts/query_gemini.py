@@ -1,3 +1,7 @@
+"""
+This script is used to test the Gemini API with a single request.
+"""
+
 from typing import List
 
 from dotenv import dotenv_values
@@ -6,6 +10,8 @@ from pydantic import BaseModel
 
 from src.utils.generate_prompt import generate_prompt
 from src.utils.homographs import fill_template, homographs
+
+# TODO: Use argparse
 
 
 class Response(BaseModel):
@@ -19,7 +25,7 @@ config = dotenv_values(".env")
 key = config["GEMINI_API_KEY"]
 client = genai.Client(api_key=key)
 
-# TODO: This is a sampple sentence
+# TODO: This is a sample sentence
 SENTENCE = "Ang sikolohiya ay mahalaga sa edukasyon dahil ito'y nag-aaral ng mga proseso ng pag-aaral at pag-unlad ng isip at damdamin ng mga mag-aaral. Ito'y nagbibigay linaw sa mga guro kung paano turuan ang mga mag-aaral nang mas epektibo batay sa kanilang pangangailangan"
 
 # Extract homograph information given the sentence
@@ -30,8 +36,10 @@ prompt = generate_prompt(
 )
 
 print("=" * 40)
-print("\nThe following prompt will be fed to Gemini:")
+print("The following prompt will be fed to Gemini:")
+print("-" * 40)
 print(prompt)
+print("=" * 40)
 
 response = client.models.generate_content(
     model="gemini-3-flash-preview",

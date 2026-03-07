@@ -1,7 +1,11 @@
+"""
+This script concurrently sends a series of requests to the Gemini API to build
+the PhoneticTatoeba dataset.
+"""
+
 import asyncio
 import json
-import os
-from typing import List, Optional
+from typing import List
 
 from dotenv import dotenv_values
 from google import genai
@@ -11,6 +15,8 @@ from tqdm.asyncio import tqdm
 from datasets import load_dataset
 from src.utils.generate_prompt import generate_prompt
 from src.utils.homographs import homographs
+
+# TODO: Use argparse
 
 OUTPUT_FILENAME = "results_gemini_3.jsonl"
 MODEL_NAME = "gemini-3-flash-preview"
@@ -105,8 +111,9 @@ async def main():
     # Process all tasks while showing an async progress bar
     results = [await t for t in tqdm.as_completed(tasks, total=len(tasks))]
 
-    print("\n" + "=" * 40)
+    print("=" * 40)
     print(f"Saved results to {OUTPUT_FILENAME}.")
+    print("=" * 40)
 
 
 if __name__ == "__main__":

@@ -1,3 +1,8 @@
+"""
+This script parses the .jsonl output of the scripts/query_gemini_tatoeba.py to
+produce a cleaner CSV file for use in training
+"""
+
 import json
 import re
 import unicodedata
@@ -7,6 +12,8 @@ from tqdm import tqdm
 
 from datasets import load_dataset
 from src.utils.homographs import fill_template, homographs
+
+# TODO: Use argparse
 
 FILE_PATH = "results_gemini_3.jsonl"
 OUTPUT_CSV = "phonetic_tatoeba_gemini_3.csv"
@@ -46,7 +53,7 @@ PHONEME_INVENTORY = [
     "ʔ",
     "ˈ",
     "ˌ",
-    # NOTE: We allow both normal and joined tie bars
+    # We allow both normal and joined tie bars
     "\u0361",
     " ‍͡ ",
     " ",
@@ -156,8 +163,8 @@ with open(FILE_PATH, "r", encoding="utf-8") as f:
             results_list.append(
                 {
                     "index": idx,
-                    "original_sentence": sentence,
-                    "processed_output": output_string,
+                    "sentence": sentence,
+                    "phoneme": output_string,
                     "status": status,
                 }
             )
@@ -166,7 +173,7 @@ df = pd.DataFrame(results_list)
 df = df.drop(columns=["status"])
 df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8")
 
-print("\n" + "=" * 40)
+print("=" * 40)
 print("Summary")
 print("-" * 40)
 print(f"Total lines in JSONL: {total_lines}")
