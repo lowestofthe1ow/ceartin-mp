@@ -101,7 +101,7 @@ training_args = Seq2SeqTrainingArguments(
     output_dir="./models/checkpoints",
     per_device_train_batch_size=4,
     gradient_accumulation_steps=8,
-    num_train_epochs=15,
+    num_train_epochs=10,
     learning_rate=3e-4,
     lr_scheduler_type="constant_with_warmup",
     warmup_steps=100,
@@ -114,6 +114,10 @@ training_args = Seq2SeqTrainingArguments(
     predict_with_generate=True,
     generation_max_length=128,
     optim="adafactor",
+    # Load the best model
+    load_best_model_at_end=True,
+    metric_for_best_model="loss",
+    greater_is_better=False,
 )
 
 trainer = Seq2SeqTrainer(
