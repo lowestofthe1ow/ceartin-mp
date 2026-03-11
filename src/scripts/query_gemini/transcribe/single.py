@@ -1,5 +1,6 @@
 """
-This script is used to test the Gemini API with a single request.
+This script is used to test the Gemini API with a single "fill in the
+pronunciation" request.
 """
 
 from typing import List
@@ -8,7 +9,7 @@ from dotenv import dotenv_values
 from google import genai
 from pydantic import BaseModel
 
-from src.utils.generate_prompt import generate_prompt
+from src.utils.generate_prompt.transcribe import generate_prompt
 from src.utils.homographs import fill_template, homographs
 
 # TODO: Use argparse

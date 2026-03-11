@@ -16,21 +16,25 @@ def wikipron_tl_df(wikipron_path):
     homographs = homographs.groupby("word")["pron"].apply(list).to_dict()
     non_homographs = non_homographs.set_index("word")["pron"].to_dict()
 
+    """
     print("=" * 40)
     print("Processed WikiPron Tagalog dataset.")
     print("-" * 40)
     print(f"Homographs (unique): {len(homographs)}")
     print(f"Non-homographs: {len(non_homographs)}")
     print("=" * 40)
+    """
 
     return homographs, non_homographs
 
 
+# If run as a script, show information about the WikiPron data...
 if __name__ == "__main__":
     file_path = "data/wikipron/wikipron_tl.tsv"
     homo_dict, non_homo_dict = wikipron_tl_df(file_path)
 
     all_pronunciations = list(non_homo_dict.values())
+
     for prons in homo_dict.values():
         all_pronunciations.extend(prons)
 

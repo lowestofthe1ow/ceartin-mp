@@ -4,7 +4,7 @@ import pandas as pd
 from dotenv import dotenv_values
 from tglstemmer import stemmer
 
-from src.datasets.wikipron.wikipron_tl_pre import wikipron_tl_df
+from src.datasets.wikipron.wikipron_tl_df import wikipron_tl_df
 
 config = dotenv_values(".env")
 

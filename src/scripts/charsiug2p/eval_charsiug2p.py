@@ -8,7 +8,7 @@ import argparse
 import torch
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 
-DEFAULT_SENTENCE = "Baka naman bawal kang uminom ng gatas ng baka."
+DEFAULT_SENTENCE = "Puno ng tubig ang baso."
 DEFAULT_CHECKPOINT_PATH = "./models/checkpoints/checkpoint-1638"
 
 parser = argparse.ArgumentParser()
@@ -18,8 +18,8 @@ args = parser.parse_args()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-tokenizer = AutoTokenizer.from_pretrained(args.path)
-model = T5ForConditionalGeneration.from_pretrained(args.path).to(device)
+tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path)
+model = T5ForConditionalGeneration.from_pretrained(args.checkpoint_path).to(device)
 
 
 def predict(text):
