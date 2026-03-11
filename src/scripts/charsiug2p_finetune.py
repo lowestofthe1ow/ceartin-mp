@@ -37,7 +37,9 @@ def preprocess_function(examples):
 
 
 # Load the PhoneticTatoeba dataset
-dataset = load_dataset("csv", data_files="data/phonetic_tatoeba_gemini_3.csv")["train"]
+dataset = load_dataset(
+    "csv", data_files="data/phonetic_tatoeba/phonetic_tatoeba_gemini_3.csv"
+)["train"]
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 tokenized_dataset = dataset.map(preprocess_function, batched=True)
 

@@ -4,6 +4,7 @@
 
 data/
 models/
+pyrightconfig.json
 
 # ==============================================================================
 # Python .gitignore template from:

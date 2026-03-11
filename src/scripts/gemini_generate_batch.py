@@ -3,17 +3,13 @@ This script is used to test the Gemini API with a single request.
 """
 
 import asyncio
-import json
-from typing import List
 
 from dotenv import dotenv_values
 from google import genai
-from pydantic import BaseModel
 from tqdm.asyncio import tqdm
 
 from src.datasets.wikipron.wikipron_tl_df import wikipron_tl_df
-from src.utils.generate_prompt.generate import generate_prompt
-from src.utils.homographs import fill_template, homographs
+from src.utils.generate_prompt.synthesize import generate_prompt
 from src.utils.process_prompt import process_prompt
 
 config = dotenv_values(".env")

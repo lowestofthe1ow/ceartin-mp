@@ -18,6 +18,3 @@ with open(FILE_PATH, "r", encoding="utf-8") as f:
             answers = data["content"]["answers"]
 
             sentences = [*sentences, *answers]
-
-
-print(len(sentences))

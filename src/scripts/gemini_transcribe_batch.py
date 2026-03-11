@@ -5,12 +5,9 @@ the PhoneticTatoeba dataset.
 
 import argparse
 import asyncio
-import json
-from typing import List
 
 from dotenv import dotenv_values
 from google import genai
-from pydantic import BaseModel
 from tqdm.asyncio import tqdm
 
 from src.utils.generate_prompt.transcribe import generate_prompt
