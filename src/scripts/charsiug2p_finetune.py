@@ -20,40 +20,14 @@ from transformers import (
     TrainerCallback,
 )
 
-from datasets import DatasetDict, load_dataset
+from src.utils.dataset_from_csv import dataset_from_csv
 
 RANDOM_STATE = 765  # ナムコプロ最強
 MODEL_ID = "charsiu/g2p_multilingual_byT5_small_100"
+DATSET_PATH = "data/phonetic_tatoeba/phonetic_tatoeba_gemini_3.csv"
 
-
-def preprocess_function(examples):
-    return tokenizer(
-        examples["sentence"],
-        text_target=examples["phoneme"],
-        max_length=128,  # TODO: Confirm if we're gonna use this limit
-        padding="max_length",  # Forces everything to have the same length
-        truncation=True,  # This truncates when it generates > max_length
-    )
-
-
-# Load the PhoneticTatoeba dataset
-dataset = load_dataset(
-    "csv", data_files="data/phonetic_tatoeba/phonetic_tatoeba_gemini_3.csv"
-)["train"]
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-tokenized_dataset = dataset.map(preprocess_function, batched=True)
-
-# Perform an 80%/10%/10% train-test-validation split
-train_test = tokenized_dataset.train_test_split(test_size=0.2, seed=RANDOM_STATE)
-val_test = train_test["test"].train_test_split(test_size=0.5, seed=RANDOM_STATE)
-
-split_dataset = DatasetDict(
-    {
-        "train": train_test["train"],
-        "validation": val_test["train"],
-        "test": val_test["test"],
-    }
-)
+split_dataset = dataset_from_csv(DATASET_PATH, tokenizer)
 
 # Set up model and DataCollator
 model = T5ForConditionalGeneration.from_pretrained(MODEL_ID)

@@ -4,7 +4,7 @@ import pandas as pd
 from dotenv import dotenv_values
 from tglstemmer import stemmer
 
-from src.datasets.wikipron.wikipron_tl_df import wikipron_tl_df
+from src.datasets.wikipron_tl_df import wikipron_tl_df
 
 config = dotenv_values(".env")
 
@@ -18,6 +18,15 @@ HOMOGRAPHS, NON_HOMOGRAPHS = wikipron_tl_df(FILE_PATH)
 NON_HOMOGRAPHS_SET = set(NON_HOMOGRAPHS.keys())
 
 
+def safe_get_stem(word):
+    """Attempts to stem a word, falling back to the original word on error."""
+    try:
+        return stemmer.get_stem(word)
+    except (IndexError, Exception):
+        # Fallback to the original word if the stemmer fails
+        return word
+
+
 def homographs(sentence):
     # Breaks down the sentence string into a list of words
     words = [word.lower().translate(TRANSLATOR).strip() for word in sentence.split()]
@@ -28,24 +37,29 @@ def homographs(sentence):
     # Get a list of all words in the sentence with homograhs replaced by "_"
     output_template = [NON_HOMOGRAPHS.get(word, "_") for word in words]
 
-    # Get a list of the pronunciations of all homographs in the sentence
-    choices = [
-        {
-            "word": word,
-            # Check if there's a match...
-            "choices": HOMOGRAPHS.get(word, []),
-            # Otherwise, fall back to root word
-            "root": {
-                "word": (root := stemmer.get_stem(word)),
-                # Check both homographs and non-homographs list
-                "choices": HOMOGRAPHS.get(
-                    root, [NON_HOMOGRAPHS.get(root, "[NO CHOICES]")]
-                ),
-            },
-        }
-        for word in words
-        if word not in NON_HOMOGRAPHS_SET
-    ]
+    try:
+        # Get a list of the pronunciations of all homographs in the sentence
+        choices = [
+            {
+                "word": word,
+                # Check if there's a match...
+                "choices": HOMOGRAPHS.get(word, []),
+                # Otherwise, fall back to root word
+                "root": {
+                    "word": (root := safe_get_stem(word)),
+                    # Check both homographs and non-homographs list
+                    "choices": HOMOGRAPHS.get(
+                        root, [NON_HOMOGRAPHS.get(root, "[NO CHOICES]")]
+                    ),
+                },
+            }
+            for word in words
+            if word not in NON_HOMOGRAPHS_SET
+        ]
+    except IndexError:
+        print("woops")
+        print(words)
+        quit()
 
     return ambiguous_words, choices, output_template
 

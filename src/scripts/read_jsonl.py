@@ -3,6 +3,7 @@ This script parses the .jsonl output of the scripts/query_gemini_tatoeba.py to
 produce a cleaner CSV file for use in training
 """
 
+import argparse
 import json
 import re
 import unicodedata
@@ -15,8 +16,17 @@ from src.utils.homographs import fill_template, homographs
 
 # TODO: Use argparse
 
-FILE_PATH = "results_gemini_3.jsonl"
-OUTPUT_CSV = "phonetic_tatoeba_gemini_3.csv"
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    "--path",
+    type=str,
+    default="data/phonetic_newsph-nli/results_gemini_2.5_flash_lite.jsonl",
+)
+parser.add_argument("--output", type=str, default="output_from_jsonl.csv")
+
+args = parser.parse_args()
+
 
 PHONEME_INVENTORY = [
     "'",
@@ -75,6 +85,21 @@ def normalize_characters(text):
         "Ɂ": "ʔ",
         ".": "",
         "‍": "",  # Zero-width joiner that Gemini hallucinates sometimes
+        # For Gemini 2.5-Flash-Lite output
+        "ɛ": "e",
+        "ɪ": "i",
+        "ʊ": "u",
+        "ɔ": "o",
+        "ɑ": "a",
+        "æ": "a",
+        ":": "",
+        "꞉": "",
+        "ː": "",
+        "\u200b": "",  # Zero-width space
+        "ɐ": "a",
+        "á": "a",
+        "ɭ": "l",
+        "ʤ": "dʒ",
     }
 
     text = text.replace(".", "")  # Remove syllable markers
@@ -106,17 +131,19 @@ def validate_characters(answers):
 
 
 # Load Tatoeba dataset
-print("Loading Tatoeba dataset...")
-dataset = load_dataset("tatoeba", "en-tl", lang1="en", lang2="tl")
-tatoeba_sentences = [item["tl"] for item in dataset["train"]["translation"]]
+print("Loading dataset...")
+
+with open("data/newsph-nli/newsph-nli.txt", "r", encoding="utf-8") as f:
+    sentences = [line.strip() for line in f if line.strip()]
 
 results_list = []
 error_count = 0
+invalid_responses = 0
 
-with open(FILE_PATH, "r", encoding="utf-8") as f:
+with open(args.path, "r", encoding="utf-8") as f:
     total_lines = sum(1 for _ in f)
 
-with open(FILE_PATH, "r", encoding="utf-8") as f:
+with open(args.path, "r", encoding="utf-8") as f:
     for line in tqdm(f, total=total_lines, desc="Processing JSONL", unit="line"):
 
         # TODO: This part needs cleaning up
@@ -124,10 +151,10 @@ with open(FILE_PATH, "r", encoding="utf-8") as f:
         data = json.loads(line)
         idx = data.get("index")
 
-        if idx is None or (idx - 1) >= len(tatoeba_sentences) or (idx - 1) < 0:
+        if idx is None or (idx - 1) >= len(sentences) or (idx - 1) < 0:
             continue
 
-        sentence = tatoeba_sentences[idx - 1]
+        sentence = sentences[idx - 1]
 
         if not sentence or not str(sentence).strip():
             continue
@@ -158,6 +185,9 @@ with open(FILE_PATH, "r", encoding="utf-8") as f:
             # Case when no ambiguous words were found
             output_string = " ".join(output_template)
             status = "empty_prompt_fallback"
+        else:
+            invalid_responses += 1
+            continue
 
         if output_string and str(output_string).strip():
             results_list.append(
@@ -171,7 +201,7 @@ with open(FILE_PATH, "r", encoding="utf-8") as f:
 
 df = pd.DataFrame(results_list)
 df = df.drop(columns=["status"])
-df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8")
+df.to_csv(args.output, index=False, encoding="utf-8")
 
 print("=" * 40)
 print("Summary")
@@ -179,4 +209,5 @@ print("-" * 40)
 print(f"Total lines in JSONL: {total_lines}")
 print(f"Valid entries: {len(df)}")
 print(f"Template mismatches : {error_count}")
+print(f"Invalid API responses: {invalid_responses}")
 print("=" * 40)

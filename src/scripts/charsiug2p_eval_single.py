@@ -9,7 +9,7 @@ import torch
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 
 DEFAULT_SENTENCE = "Puno ng tubig ang baso."
-DEFAULT_CHECKPOINT_PATH = "./models/checkpoints/checkpoint-1638"
+DEFAULT_CHECKPOINT_PATH = "./models/checkpoints/checkpoint-728"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("sentence", nargs="?", default=DEFAULT_SENTENCE)

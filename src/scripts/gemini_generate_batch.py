@@ -8,7 +8,7 @@ from dotenv import dotenv_values
 from google import genai
 from tqdm.asyncio import tqdm
 
-from src.datasets.wikipron.wikipron_tl_df import wikipron_tl_df
+from src.datasets.wikipron_tl_df import wikipron_tl_df
 from src.utils.generate_prompt.synthesize import generate_prompt
 from src.utils.process_prompt import process_prompt
 

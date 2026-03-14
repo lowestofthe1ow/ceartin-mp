@@ -27,7 +27,9 @@ key = config["GEMINI_API_KEY"]
 client = genai.Client(api_key=key)
 
 # TODO: This is a sample sentence
-SENTENCE = "Ang sikolohiya ay mahalaga sa edukasyon dahil ito'y nag-aaral ng mga proseso ng pag-aaral at pag-unlad ng isip at damdamin ng mga mag-aaral. Ito'y nagbibigay linaw sa mga guro kung paano turuan ang mga mag-aaral nang mas epektibo batay sa kanilang pangangailangan"
+SENTENCE = "Hindi ko ugali ang mamulitika; mas gusto kong tahimik na magtrabaho. Pero sasabihin ko ito ngayon: ang tapang, lakas, at diskarte, hindi nadadaan sa mapanirang salita. Ang kailangan ng taumbayan ay tapang sa gawa, ayon kay Robredo sa inilabas nitong statement."
+
+# "Ang sikolohiya ay mahalaga sa edukasyon dahil ito'y nag-aaral ng mga proseso ng pag-aaral at pag-unlad ng isip at damdamin ng mga mag-aaral. Ito'y nagbibigay linaw sa mga guro kung paano turuan ang mga mag-aaral nang mas epektibo batay sa kanilang pangangailangan"
 
 # Extract homograph information given the sentence
 ambiguous_words, choices, output_template = homographs(SENTENCE)
@@ -43,7 +45,7 @@ print(prompt)
 print("=" * 40)
 
 response = client.models.generate_content(
-    model="gemini-3-flash-preview",
+    model="gemini-2.5-flash-lite",
     contents=prompt,
     config={
         "response_mime_type": "application/json",

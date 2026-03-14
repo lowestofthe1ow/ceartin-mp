@@ -19,13 +19,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--path",
     type=str,
-    default="data/tatoeba/tatoeba.txt",
+    default="data/newsph-nli/newsph-nli.txt",
 )
 
 args = parser.parse_args()
 
-OUTPUT_FILENAME = "results_gemini_3.jsonl"
-MODEL_NAME = "gemini-3-flash-preview"
+OUTPUT_FILENAME = "results_gemini_2.5_lite.jsonl"
+MODEL_NAME = "gemini-2.5-flash-lite"
 CONCURRENCY_LIMIT = 80
 
 
@@ -38,12 +38,13 @@ async def main():
     # NOTE: Can test with a smaller batch first if needed
     # sentences = sentences[:100]
 
+    print("Here")
     with open(args.path, "r", encoding="utf-8") as f:
         sentences = [line.strip() for line in f if line.strip()]
 
     print(f"{len(sentences)} loaded from dataset. Generating prompts...")
     prompts = []
-    for s in sentences:
+    for s in tqdm(sentences):
         words, choices, _ = homographs(s)
         if words:
             prompts.append(

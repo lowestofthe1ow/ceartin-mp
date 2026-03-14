@@ -6,12 +6,13 @@ import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 
-from datasets import load_dataset
+from src.utils.dataset_from_csv import dataset_from_csv
 
 DEFAULT_CHECKPOINT = "./models/checkpoints/checkpoint-728"
 DATA_PATH = "data/phonetic_tatoeba/phonetic_tatoeba_gemini_3.csv"
 MODEL_ID = "charsiu/g2p_multilingual_byT5_small_100"
 SEED = 765  # ナムコプロ最強
+DATASET_PATH = "data/phonetic_tatoeba/phonetic_tatoeba_gemini_3.csv"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--checkpoint-path", default=DEFAULT_CHECKPOINT)
@@ -27,10 +28,10 @@ model = (
 ft = panphon.FeatureTable()
 dst = panphon.distance.Distance()
 
-full_ds = load_dataset("csv", data_files=DATA_PATH)["train"]
-train_test = full_ds.train_test_split(test_size=0.2, seed=SEED)
-val_test = train_test["test"].train_test_split(test_size=0.5, seed=SEED)
-test_set = val_test["test"]
+
+split_dataset = dataset_from_csv(DATASET_PATH, tokenizer)
+
+test_set = split_dataset["test"]
 
 total_per_dist = 0
 total_pfer_dist = 0
