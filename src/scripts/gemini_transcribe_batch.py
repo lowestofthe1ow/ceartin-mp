@@ -1,6 +1,6 @@
 """
-This script concurrently sends a series of requests to the Gemini API to build
-the PhoneticTatoeba dataset.
+This script concurrently sends "fill in the pronunciation" requests to the
+Gemini API.
 """
 
 import argparse
@@ -14,19 +14,14 @@ from src.utils.generate_prompt.transcribe import generate_prompt
 from src.utils.homographs import homographs
 from src.utils.process_prompt import process_prompt
 
-parser = argparse.ArgumentParser()
-
-parser.add_argument(
-    "--path",
-    type=str,
-    default="data/newsph-nli/newsph-nli.txt",
-)
-
-args = parser.parse_args()
-
+DEFAULT_DATASET_PATH = "data/newsph-nli/newsph-nli.txt"
 OUTPUT_FILENAME = "results_gemini_2.5_lite.jsonl"
 MODEL_NAME = "gemini-2.5-flash-lite"
 CONCURRENCY_LIMIT = 80
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dataset-path", type=str, default=DEFAULT_DATASET_PATH)
+args = parser.parse_args()
 
 
 async def main():
@@ -39,7 +34,7 @@ async def main():
     # sentences = sentences[:100]
 
     print("Here")
-    with open(args.path, "r", encoding="utf-8") as f:
+    with open(args.dataset_path, "r", encoding="utf-8") as f:
         sentences = [line.strip() for line in f if line.strip()]
 
     print(f"{len(sentences)} loaded from dataset. Generating prompts...")

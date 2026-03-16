@@ -12,9 +12,8 @@ from pydantic import BaseModel
 from src.utils.generate_prompt.transcribe import generate_prompt
 from src.utils.homographs import fill_template, homographs
 
+
 # TODO: Use argparse
-
-
 class Response(BaseModel):
     """JSON schema for Gemini API's structured output"""
 

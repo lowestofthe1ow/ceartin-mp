@@ -16,17 +16,12 @@ from src.utils.homographs import fill_template, homographs
 
 # TODO: Use argparse
 
+DEFAULT_DATASET_PATH = "data/phonetic_newsph-nli/results_gemini_2.5_flash_lite.jsonl"
+
 parser = argparse.ArgumentParser()
-
-parser.add_argument(
-    "--path",
-    type=str,
-    default="data/phonetic_newsph-nli/results_gemini_2.5_flash_lite.jsonl",
-)
+parser.add_argument("--dataset-path", type=str, default=DEFAULT_DATASET_PATH)
 parser.add_argument("--output", type=str, default="output_from_jsonl.csv")
-
 args = parser.parse_args()
-
 
 PHONEME_INVENTORY = [
     "'",
@@ -140,10 +135,10 @@ results_list = []
 error_count = 0
 invalid_responses = 0
 
-with open(args.path, "r", encoding="utf-8") as f:
+with open(args.dataset_path, "r", encoding="utf-8") as f:
     total_lines = sum(1 for _ in f)
 
-with open(args.path, "r", encoding="utf-8") as f:
+with open(args.dataset_path, "r", encoding="utf-8") as f:
     for line in tqdm(f, total=total_lines, desc="Processing JSONL", unit="line"):
 
         # TODO: This part needs cleaning up

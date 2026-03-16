@@ -1,5 +1,5 @@
 """
-This script performs a single evaluation of a given sentence on a trained model
+This script performs a single inference of a given sentence on a trained model
 checkpoint.
 """
 

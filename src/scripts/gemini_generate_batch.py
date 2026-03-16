@@ -1,6 +1,10 @@
 """
-This script is used to test the Gemini API with a single request.
+This script concurrently sends "generate a sentence for each possible
+pronunciation" requests to the Gemini API.
 """
+
+# WARNING: This uses AI Studio, not Vertex AI!
+# As of 2026, AI Studio cannot be used with Google Cloud credits!
 
 import asyncio
 
@@ -12,16 +16,16 @@ from src.datasets.wikipron_tl_df import wikipron_tl_df
 from src.utils.generate_prompt.synthesize import generate_prompt
 from src.utils.process_prompt import process_prompt
 
+# Read from .env
 config = dotenv_values(".env")
-
-# TODO: Use argparse
-
 FILE_PATH = config["WIKIPRON_PATH"]
-HOMOGRAPHS, _ = wikipron_tl_df(FILE_PATH)
 
+# TODO: Use argparse?
+
+HOMOGRAPHS, _ = wikipron_tl_df(FILE_PATH)
+CONCURRENCY_LIMIT = 80
 OUTPUT_FILENAME = "results_gemini_3.jsonl"
 MODEL_NAME = "gemini-3-flash-preview"
-CONCURRENCY_LIMIT = 80
 
 
 async def main():
