@@ -1,6 +1,8 @@
 <div align="center">
 
-<h1>CEARTIN Machine Project</h1>
+CEARTIN Machine Project
+
+<h1>ByT5-Based Fine-Tuned Stress-Aware Filipino G2P Model</h1>
 
 </div>
 
@@ -22,3 +24,12 @@ This project uses [`uv`](https://docs.astral.sh/uv/) to manage packages.
    with `pre-commit --version`.
 2. Install the hook scripts with `pre-commit install`.
 3. Run `pre-commit run --all-files` to run the pre-commit hooks on all files.
+
+### Fine-tuning
+
+1. Run `src/scripts/g2p_finetune.py` with the `--dataset` argument, which
+   accepts `"tatoeba"`, `"newsph-nli"`, and `"combined"`
+
+```
+python3 -m src.scripts.g2p_finetune --dataset "tatoeba"
+```
