@@ -1,4 +1,4 @@
-from datasets import DatasetDict, load_dataset
+from datasets import DatasetDict, concatenate_datasets, load_dataset
 
 RANDOM_STATE = 765  # ナムコプロ最強
 
@@ -32,3 +32,23 @@ def dataset_from_csv(csv_path, tokenizer):
     )
 
     return split_dataset
+
+
+def dataset_from_csv_list(csv_paths, tokenizer):
+    grouped_splits = {}
+
+    for path in csv_paths:
+        ds_dict = dataset_from_csv(path, tokenizer)
+
+        # Group splits by "train", "test", and "validation"
+        for split_name, dataset in ds_dict.items():
+            if split_name not in grouped_splits:
+                grouped_splits[split_name] = []
+            grouped_splits[split_name].append(dataset)
+
+    # Concatenate the lists of datasets for each split
+    concatenated_splits = {}
+    for split_name, dataset_list in grouped_splits.items():
+        concatenated_splits[split_name] = concatenate_datasets(dataset_list)
+
+    return DatasetDict(concatenated_splits)

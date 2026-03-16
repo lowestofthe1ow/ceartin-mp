@@ -16,7 +16,7 @@ from src.utils.homographs import fill_template, homographs
 
 # TODO: Use argparse
 
-DEFAULT_DATASET_PATH = "data/phonetic_newsph-nli/results_gemini_2.5_flash_lite.jsonl"
+DEFAULT_DATASET_PATH = "data/newsph-nli/results_gemini_2.5_lite.jsonl"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset-path", type=str, default=DEFAULT_DATASET_PATH)

@@ -3,6 +3,8 @@ This script evaluates a model checkpoint on a given test set by calculating PER
 and PFER.
 """
 
+# TODO: This needs work.
+
 import argparse
 
 import panphon
@@ -11,17 +13,34 @@ import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 
-from src.utils.dataset_from_csv import dataset_from_csv
+from src.utils.dataset_from_csv import dataset_from_csv_list
 
 DEFAULT_MODEL_ID = "charsiu/g2p_multilingual_byT5_small_100"
-DEFAULT_CHECKPOINT = "./models/checkpoints/checkpoint-728"
-DEFAULT_DATASET_PATH = "data/phonetic_tatoeba/phonetic_tatoeba_gemini_3.csv"
+
+DEFAULT_CHECKPOINT = (
+    "models/checkpoints/2026-03-16_13-52_baseline_tatoeba/checkpoint-455"
+    # "models/checkpoints/2026-03-16_14-27_baseline_combined/checkpoint-2695"
+)
+DEFAULT_DATASET_PATH = "data/combined.csv"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model-id", default=DEFAULT_MODEL_ID)
 parser.add_argument("--checkpoint-path", default=DEFAULT_CHECKPOINT)
-parser.add_argument("--dataset-path", default=DEFAULT_DATASET_PATH)
+parser.add_argument(
+    "--dataset", default="tatoeba", choices=["tatoeba", "newsph-nli", "combined"]
+)
 args = parser.parse_args()
+
+# Set up dataset CSV paths
+if args.dataset == "tatoeba":
+    dataset = ["data/tatoeba/phonetic_tatoeba_gemini_3.csv"]
+elif args.dataset == "newsph-nli":
+    dataset = ["data/newsph-nli/phonetic_newsph-nli_gemini_2.5_lite.csv"]
+elif args.dataset == "combined":
+    dataset = [
+        "data/tatoeba/phonetic_tatoeba_gemini_3.csv",
+        "data/newsph-nli/phonetic_newsph-nli_gemini_2.5_lite.csv",
+    ]
 
 # Use CUDA if available
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -37,7 +56,7 @@ ft = panphon.FeatureTable()
 dst = panphon.distance.Distance()
 
 # Get the test split
-split_dataset = dataset_from_csv(args.dataset_path, tokenizer)
+split_dataset = dataset_from_csv_list(dataset, tokenizer)
 test_set = split_dataset["test"]
 
 # Running sums
@@ -45,7 +64,7 @@ total_per_dist = 0
 total_pfer_dist = 0
 total_phonemes = 0
 
-print(f"Evaluating {len(test_set)} samples from {args.dataset_path}")
+print(f"Evaluating {len(test_set)} samples from {datasets}")
 
 with torch.no_grad():
     for item in tqdm(test_set):
