@@ -73,7 +73,7 @@ training_args = Seq2SeqTrainingArguments(
     # Use standard ByT5 learning rates...
     learning_rate=3e-4,
     lr_scheduler_type="constant_with_warmup",
-    warmup_steps=300,
+    warmup_steps=100 if args.dataset == "tatoeba" else 300,
     # --------------------------------------------
     num_train_epochs=10,  # TODO: Is 10 good?
     eval_strategy="epoch",
