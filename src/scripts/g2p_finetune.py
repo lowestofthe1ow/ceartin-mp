@@ -34,6 +34,7 @@ parser.add_argument("--model-id", default=DEFAULT_MODEL_ID)
 parser.add_argument(
     "--dataset", default="tatoeba", choices=["tatoeba", "newsph-nli", "combined"]
 )
+parser.add_argument("--description", default="sample_finetune")
 args = parser.parse_args()
 
 # Set up dataset CSV paths
@@ -55,9 +56,8 @@ model = T5ForConditionalGeneration.from_pretrained(args.model_id)
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Create a new directory for this run...
-description = input("Enter model description for this run: ")
 run_id = datetime.now().strftime("%Y-%m-%d_%H-%M")
-custom_path = f"./models/checkpoints/{run_id}_{description}"
+custom_path = f"./models/checkpoints/{run_id}_{args.description}"
 
 # Optimizer and trainer configuration
 
