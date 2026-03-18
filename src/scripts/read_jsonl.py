@@ -56,7 +56,7 @@ PHONEME_INVENTORY = [
     "ʌ",
     "ʒ",
     "ʔ",
-    "ˈ",
+    # "ˈ",
     "ˌ",
     # We allow both normal and joined tie bars
     "\u0361",
@@ -79,6 +79,7 @@ def normalize_characters(text):
         ",": "ˌ",
         "Ɂ": "ʔ",
         ".": "",
+        "ˈ": "'",
         "‍": "",  # Zero-width joiner that Gemini hallucinates sometimes
         # For Gemini 2.5-Flash-Lite output
         "ɛ": "e",
@@ -130,6 +131,9 @@ print("Loading dataset...")
 
 with open("data/newsph-nli/newsph-nli.txt", "r", encoding="utf-8") as f:
     sentences = [line.strip() for line in f if line.strip()]
+
+# dataset = load_dataset("tatoeba", "en-tl", lang1="en", lang2="tl")
+# sentences = [item["tl"] for item in dataset["train"]["translation"]]
 
 results_list = []
 error_count = 0
@@ -196,6 +200,7 @@ with open(args.dataset_path, "r", encoding="utf-8") as f:
 
 df = pd.DataFrame(results_list)
 df = df.drop(columns=["status"])
+df["phoneme"] = df["phoneme"].apply(normalize_characters)
 df.to_csv(args.output, index=False, encoding="utf-8")
 
 print("=" * 40)
