@@ -26,7 +26,3 @@ dev = [
 
 [tool.uv.sources]
 tglstemmer = { git = "https://github.com/andrianllmm/tagalog-stemmer.git", rev = "main" }
-
-[tool.uv.scripts]
-finetune = "uv run python3 -m src.scripts.cli_finetune"
-eval = "python src/scripts/cli_eval.py"
