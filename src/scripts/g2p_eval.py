@@ -18,6 +18,7 @@ from src.utils.dataset_from_csv import dataset_from_csv_list
 DEFAULT_MODEL_ID = "charsiu/g2p_multilingual_byT5_small_100"
 
 DEFAULT_CHECKPOINT = (
+    # "models/checkpoints/2026-03-16_22-45_baseline_combined/checkpoint-3080"
     "models/checkpoints/2026-03-16_13-52_baseline_tatoeba/checkpoint-455"
     # "models/checkpoints/2026-03-16_14-27_baseline_combined/checkpoint-2695"
 )
@@ -62,9 +63,11 @@ test_set = split_dataset["test"]
 # Running sums
 total_per_dist = 0
 total_pfer_dist = 0
+total_cer_dist = 0
 total_phonemes = 0
+total_chars = 0
 
-print(f"Evaluating {len(test_set)} samples from {datasets}")
+print(f"Evaluating {len(test_set)} samples from {dataset}")
 
 with torch.no_grad():
     for item in tqdm(test_set):
@@ -88,14 +91,22 @@ with torch.no_grad():
         except ValueError:
             pfer_dist = len(target_segs)
 
+        # Calculate CER (Levenshtein on raw characters)
+        cer_dist = dst.levenshtein_distance(pred_text, target_text)
+
         # Add to the summation
         total_per_dist += per_dist
         total_pfer_dist += pfer_dist
+        total_cer_dist += cer_dist
+
         total_phonemes += len(target_segs)
+        total_chars += len(target_text)
 
 final_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
 final_pfer = total_pfer_dist / total_phonemes if total_phonemes > 0 else 0
+final_cer = total_cer_dist / total_chars if total_chars > 0 else 0
 
+print(f"Character Error Rate (CER):         {final_cer:.4f}")
 print(f"Phoneme Error Rate (PER):           {final_per:.4f}")
 print(f"Phonetic Feature Error Rate (PFER): {final_pfer:.4f}")
 print(f"Total reference phonemes:           {total_phonemes}")

@@ -21,6 +21,7 @@ dev = [
     "isort>=8.0.0",
     "pre-commit>=4.5.1",
     "python-dotenv>=1.2.1",
+    "questionary>=2.1.1",
 ]
 
 [tool.uv.sources]
