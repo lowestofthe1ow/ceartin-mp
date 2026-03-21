@@ -7,7 +7,7 @@ def preprocess_function(examples, tokenizer):
     return tokenizer(
         examples["sentence"],
         text_target=examples["phoneme"],
-        max_length=128,  # TODO: Confirm if we're gonna use this limit
+        max_length=512,  # TODO: Confirm if we're gonna use this limit
         padding="max_length",  # Forces everything to have the same length
         truncation=True,  # This truncates when it generates > max_length
     )

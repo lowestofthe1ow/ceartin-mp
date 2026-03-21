@@ -48,6 +48,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 tokenizer = AutoTokenizer.from_pretrained(args.model_id)
 
+# TODO: Add to CLI
 model = T5ForConditionalGeneration.from_pretrained(args.checkpoint_path)
 model.to(device)
 model.eval()
@@ -78,7 +79,13 @@ with torch.no_grad():
             continue
 
         inputs = tokenizer(item["sentence"], return_tensors="pt").to(device)
-        outputs = model.generate(**inputs, max_length=512)
+
+        outputs = model.generate(
+            **inputs,
+            max_length=512,
+            # repetition_penalty=1.3,
+            # sentence=[item["sentence"] * 8],
+        )
         pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         pred_segs = ft.ipa_segs(pred_text)
 

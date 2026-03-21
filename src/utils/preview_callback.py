@@ -27,7 +27,7 @@ class PreviewCallback(TrainerCallback):
             "attention_mask": inputs["attention_mask"].to(args.device),
         }
 
-        generated_tokens = kwargs["model"].generate(**model_inputs, max_length=128)
+        generated_tokens = kwargs["model"].generate(**model_inputs, max_length=512)
 
         preds = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
         labels = self.tokenizer.batch_decode(inputs["labels"], skip_special_tokens=True)
