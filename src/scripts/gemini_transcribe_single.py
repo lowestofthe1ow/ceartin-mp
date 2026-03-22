@@ -7,6 +7,7 @@ from typing import List
 
 from dotenv import dotenv_values
 from google import genai
+from google.genai import types
 from pydantic import BaseModel
 
 from src.utils.generate_prompt.transcribe import generate_prompt
@@ -22,8 +23,15 @@ class Response(BaseModel):
 
 # Set up Gemini API
 config = dotenv_values(".env")
-key = config["GEMINI_API_KEY"]
-client = genai.Client(api_key=key)
+VERTEX_KEY = config["VERTEX_API_KEY"]
+client = genai.Client(api_key=VERTEX_KEY, vertexai=True)
+
+gen_config = types.GenerateContentConfig(
+    response_mime_type="application/json",
+    response_json_schema=Response.model_json_schema(),
+    thinking_config=types.ThinkingConfig(thinking_level="MINIMAL"),
+)
+
 
 # TODO: This is a sample sentence
 SENTENCE = "Hindi ko ugali ang mamulitika; mas gusto kong tahimik na magtrabaho. Pero sasabihin ko ito ngayon: ang tapang, lakas, at diskarte, hindi nadadaan sa mapanirang salita. Ang kailangan ng taumbayan ay tapang sa gawa, ayon kay Robredo sa inilabas nitong statement."
@@ -44,12 +52,7 @@ print(prompt)
 print("=" * 40)
 
 response = client.models.generate_content(
-    model="gemini-2.5-flash-lite",
-    contents=prompt,
-    config={
-        "response_mime_type": "application/json",
-        "response_json_schema": Response.model_json_schema(),
-    },
+    model="gemini-3-flash-preview", contents=prompt, config=gen_config
 )
 
 output = Response.model_validate_json(response.text)

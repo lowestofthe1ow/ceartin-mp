@@ -4,14 +4,20 @@ from typing import List
 from pydantic import BaseModel
 
 
+class Sentence(BaseModel):
+    pronunciation: str
+    sentence: str
+
+
 class Response(BaseModel):
     """JSON schema for Gemini API's structured output"""
 
-    answers: List[str]
+    word: str
+    answers: List[Sentence]
 
 
 async def process_prompt(
-    index, prompt, client, model_name, semaphore, output_file, file_lock
+    index, prompt, client, model_name, semaphore, output_file, file_lock, gen_config
 ):
     """
     Sends prompts to Gemini concurrently and saves to an entry in an output
@@ -28,12 +34,7 @@ async def process_prompt(
         async with semaphore:
             try:
                 response = await client.aio.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config={
-                        "response_mime_type": "application/json",
-                        "response_json_schema": Response.model_json_schema(),
-                    },
+                    model=model_name, contents=prompt, config=gen_config
                 )
 
                 output = Response.model_validate_json(response.text)

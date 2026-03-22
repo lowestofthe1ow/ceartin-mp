@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 
 class Sentence(BaseModel):
-    meaning: int
+    pronunciation: str
     sentence: str
 
 
@@ -37,8 +37,8 @@ is to create a list of sentences (in Filipino, not in IPA) that use the same
 word in different meanings or contexts, three for each definition corresponding
 to the pronunciations listed. Follow standard Filipino grammar. Exclude all
 diacritics from your responses. You may perform conjugations if applicable.
-Include the word itself in your response, then index the sentence's use of the
-word starting at meaning=1.
+Include the word itself and its intended pronunciation for that sentence in
+your response.
 </instructions>
 <word>sikat</word>
 <pronunciations_list>
@@ -54,7 +54,7 @@ print(prompt)
 print("=" * 40)
 
 response = client.models.generate_content(
-    model="gemini-3-flash-preview",
+    model="gemini-3.1-flash-lite-preview",
     contents=prompt,
     config=types.GenerateContentConfig(
         response_mime_type="application/json",

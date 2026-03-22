@@ -1,10 +1,11 @@
 """
 This script concurrently sends "fill in the pronunciation" requests to the
-Gemini API.
+Gemini API via Vertex AI.
 """
 
 import argparse
 import asyncio
+from typing import List
 
 from dotenv import dotenv_values
 from google import genai
@@ -23,12 +24,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dataset-path", type=str, default=DEFAULT_DATASET_PATH)
 args = parser.parse_args()
 
+config = dotenv_values(".env")
+VERTEX_KEY = config["VERTEX_API_KEY"]
+
 
 async def main():
     # Set up Gemini API
-    config = dotenv_values(".env")
-    key = config.get("GEMINI_API_KEY")
-    client = genai.Client(api_key=key)
+    client = genai.Client(api_key=VERTEX_KEY, vertexai=True)
 
     # NOTE: Can test with a smaller batch first if needed
     # sentences = sentences[:100]
@@ -54,12 +56,25 @@ async def main():
     # Delete existing file if it exists...
     open(OUTPUT_FILENAME, "w").close()
 
+    gen_config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_json_schema=Response.model_json_schema(),
+        thinking_config=types.ThinkingConfig(thinking_level="MINIMAL"),
+    )
+
     # Set concurrency limits
     print(f"Concurrency limit: {CONCURRENCY_LIMIT}")
     tasks = [
         asyncio.create_task(
             process_prompt(
-                i, prompt, client, MODEL_NAME, semaphore, OUTPUT_FILENAME, file_lock
+                i,
+                prompt,
+                client,
+                MODEL_NAME,
+                semaphore,
+                OUTPUT_FILENAME,
+                file_lock,
+                gen_config,
             )
         )
         for i, prompt in enumerate(prompts, start=1)

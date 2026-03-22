@@ -83,7 +83,7 @@ training_args = Seq2SeqTrainingArguments(
     # --------------------------------------------
     # Max generated length of 512 for sentences
     predict_with_generate=True,
-    generation_max_length=512,
+    generation_max_length=1024,
     # --------------------------------------------
     load_best_model_at_end=True,
     metric_for_best_model="loss",
