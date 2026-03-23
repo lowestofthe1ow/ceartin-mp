@@ -67,8 +67,8 @@ training_args = Seq2SeqTrainingArguments(
     optim="adafactor",
     # --------------------------------------------
     # Effective batch size: 16 * 4 = 64
-    per_device_train_batch_size=16,
-    gradient_accumulation_steps=4,
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=32,
     # --------------------------------------------
     # Use standard ByT5 learning rates...
     learning_rate=3e-4,
@@ -78,12 +78,12 @@ training_args = Seq2SeqTrainingArguments(
     num_train_epochs=10,  # TODO: Is 10 good?
     eval_strategy="epoch",
     save_strategy="epoch",
-    save_total_limit=1,
+    save_total_limit=3,
     logging_steps=10,
     # --------------------------------------------
     # Max generated length of 512 for sentences
     predict_with_generate=True,
-    generation_max_length=1024,
+    generation_max_length=512,
     # --------------------------------------------
     load_best_model_at_end=True,
     metric_for_best_model="loss",

@@ -89,6 +89,9 @@ with torch.no_grad():
         pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         pred_segs = ft.ipa_segs(pred_text)
 
+        print("-" * 80)
+        print(f"Target:  {target_text}\nPredict: {pred_text}")
+
         # Calculate PER
         per_dist = dst.levenshtein_distance(pred_segs, target_segs)
 
@@ -108,6 +111,9 @@ with torch.no_grad():
 
         total_phonemes += len(target_segs)
         total_chars += len(target_text)
+
+        running_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
+        print(f"Running PER: {running_per}")
 
 final_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
 final_pfer = total_pfer_dist / total_phonemes if total_phonemes > 0 else 0

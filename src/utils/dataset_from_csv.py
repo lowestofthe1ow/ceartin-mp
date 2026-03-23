@@ -1,3 +1,5 @@
+import torch
+
 from datasets import DatasetDict, concatenate_datasets, load_dataset
 
 RANDOM_STATE = 765  # ナムコプロ最強
@@ -13,8 +15,43 @@ def preprocess_function(examples, tokenizer):
     )
 
 
+def capitalize_sentence(item):
+    if item["sentence"] and item["sentence"].strip():
+        item["sentence"] = item["sentence"].strip()
+        item["sentence"] = item["sentence"][0].upper() + item["sentence"][1:]
+    return item
+
+
+def is_valid(item):
+    if not item["sentence"] or not item["sentence"].strip():
+        return False
+    if any(c.isdigit() for c in item["sentence"]):
+        return False
+    if len(item["sentence"].encode("utf-8")) > 512:
+        return False
+    return True
+
+
+def preprocess_dataset(dataset):
+    print(f"Dataset length before filtering: {len(dataset)}")
+    dataset = dataset.filter(is_valid, load_from_cache_file=False)
+    print(f"Dataset length after filtering: {len(dataset)}")
+
+    dataset = dataset.map(capitalize_sentence, load_from_cache_file=False)
+
+    # Print sentence lengths
+    lengths = [len(item["sentence"].encode("utf-8")) for item in dataset]
+    avg = sum(lengths) / len(lengths)
+    std = (sum((l - avg) ** 2 for l in lengths) / len(lengths)) ** 0.5
+    print(
+        f"Sentence lengths (bytes): min={min(lengths)}, max={max(lengths)}, avg={avg:.1f}, std={std:.1f}"
+    )
+    return dataset
+
+
 def dataset_from_csv(csv_path, tokenizer):
     dataset = load_dataset("csv", data_files=csv_path)["train"]
+    dataset = preprocess_dataset(dataset)
     tokenized_dataset = dataset.map(
         lambda x: preprocess_function(x, tokenizer), batched=True
     )
@@ -30,6 +67,8 @@ def dataset_from_csv(csv_path, tokenizer):
             "test": val_test["test"],
         }
     )
+
+    split_dataset["train"] = split_dataset["train"].shuffle(seed=RANDOM_STATE)
 
     return split_dataset
 
