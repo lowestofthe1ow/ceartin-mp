@@ -61,7 +61,7 @@ on Tagalog grammar and context.
    on standard Filipino pronunciation.
 4. Formatting rules:
     - Only include answers for the list of words given.
-    - Place stress markers (') at the beginning of the stressed syllable.
+    - Place stress markers (') at the BEGINNING of the stressed syllable.
     - Exclude prosodic markers (like tone) and syllable separators (dots).
     - Provide the response as a direct, comma-separated list of IPA strings in
     the exact order the words appear in the sentence.

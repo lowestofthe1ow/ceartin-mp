@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 
 # TODO: Move these into a separate class
@@ -14,8 +14,8 @@ class Sentence(BaseModel):
 class Response(BaseModel):
     """JSON schema for Gemini API's structured output"""
 
-    word: str
-    answers: List[Sentence]
+    # word: str
+    answers: List[str]
 
 
 async def process_prompt(
@@ -34,13 +34,22 @@ async def process_prompt(
                 )
 
                 output = Response.model_validate_json(response.text)
-
                 result_entry = {
                     "index": index,
                     "success": True,
                     "content": output.model_dump(),
                     "error": None,
                 }
+            break
+
+        except ValidationError as ve:
+            print(f"\n[Index {index}] Validation Error: {ve}. Skipping...")
+            result_entry = {
+                "index": index,
+                "success": False,
+                "error": "ERR_VALIDATION_FAILED",
+                "details": str(ve),
+            }
             break
 
         except Exception as e:

@@ -5,10 +5,14 @@ Gemini API via Vertex AI.
 
 import argparse
 import asyncio
+import json
+import os
 from typing import List
 
 from dotenv import dotenv_values
 from google import genai
+from google.genai import types
+from pydantic import BaseModel
 from tqdm.asyncio import tqdm
 
 from src.utils.generate_prompt.transcribe import generate_prompt
@@ -16,9 +20,9 @@ from src.utils.homographs import homographs
 from src.utils.process_prompt import process_prompt
 
 DEFAULT_DATASET_PATH = "data/newsph-nli/newsph-nli.txt"
-OUTPUT_FILENAME = "results_gemini_2.5_lite.jsonl"
-MODEL_NAME = "gemini-2.5-flash-lite"
-CONCURRENCY_LIMIT = 80
+OUTPUT_FILENAME = "results_gemini_2.5_ambiguous.jsonl"
+MODEL_NAME = "gemini-3-flash-preview"
+CONCURRENCY_LIMIT = 25
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset-path", type=str, default=DEFAULT_DATASET_PATH)
@@ -26,6 +30,12 @@ args = parser.parse_args()
 
 config = dotenv_values(".env")
 VERTEX_KEY = config["VERTEX_API_KEY"]
+
+
+class Response(BaseModel):
+    """JSON schema for Gemini API's structured output"""
+
+    answers: List[str]
 
 
 async def main():
@@ -50,16 +60,34 @@ async def main():
         else:
             prompts.append(None)
 
+    # --- CHECKPOINT LOGIC: Identify completed indices ---
+    completed_indices = set()
+    if os.path.exists(OUTPUT_FILENAME):
+        with open(OUTPUT_FILENAME, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    data = json.loads(line)
+                    if data.get("success"):
+                        completed_indices.add(data["index"])
+                except json.JSONDecodeError:
+                    continue
+    print(f"Skipping {len(completed_indices)} already processed items.")
+    # ----------------------------------------------------
+
     semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
     file_lock = asyncio.Lock()
 
     # Delete existing file if it exists...
-    open(OUTPUT_FILENAME, "w").close()
+    # open(OUTPUT_FILENAME, "w").close()
 
     gen_config = types.GenerateContentConfig(
         response_mime_type="application/json",
         response_json_schema=Response.model_json_schema(),
-        thinking_config=types.ThinkingConfig(thinking_level="MINIMAL"),
+        thinking_config=types.ThinkingConfig(thinking_level="LOW"),
+        # thinking_config=types.ThinkingConfig(
+        #    include_thoughts=False,  # Keeps the 'thought' process out of the response
+        #    thinking_budget=0,  # 0 strictly disables the reasoning stepthinking_level="MINIMAL"),
+        # ),
     )
 
     # Set concurrency limits
@@ -78,6 +106,7 @@ async def main():
             )
         )
         for i, prompt in enumerate(prompts, start=1)
+        if i not in completed_indices
     ]
 
     # Process all tasks while showing an async progress bar
