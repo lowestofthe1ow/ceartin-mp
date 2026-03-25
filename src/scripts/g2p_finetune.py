@@ -37,6 +37,10 @@ parser.add_argument(
     choices=["tatoeba", "newsph-nli", "combined", "combined-stress"],
 )
 parser.add_argument("--description", default="sample_finetune")
+parser.add_argument(
+    "--resume-from",
+    default=None,
+)
 args = parser.parse_args()
 
 # Set up dataset CSV paths
@@ -108,4 +112,4 @@ trainer = Seq2SeqTrainer(
     callbacks=[PreviewCallback(split_dataset["validation"], data_collator, tokenizer)],
 )
 
-trainer.train()
+trainer.train(resume_from_checkpoint=args.resume_from)
