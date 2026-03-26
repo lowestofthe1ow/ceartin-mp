@@ -5,7 +5,7 @@ from pathlib import Path
 import questionary
 
 # Define the available datasets for finetuning
-DATASETS = ["tatoeba", "newsph-nli", "combined", "combined-stress"]
+DATASETS = ["tatoeba", "newsph-nli", "combined", "stress", "combined-stress"]
 DEFAULT_CHECKPOINTS_PATH = "models/checkpoints"
 
 
@@ -32,16 +32,34 @@ if not selected_dataset:
     print("Cancelled by user.")
     sys.exit(0)
 
-# Ask if the user wants to resume from a checkpoint
+# Ask if the user wants to load (resume/finetune) from a checkpoint
 resume_path = None
-if questionary.confirm("Resume from a checkpoint?", default=False).ask():
+finetune_path = None
+if questionary.confirm("Load from a checkpoint?", default=False).ask():
     available_checkpoints = get_checkpoints()
     if available_checkpoints:
-        resume_path = questionary.select(
-            "Select checkpoint to resume from:", choices=available_checkpoints
+        checkpoint_path = questionary.select(
+            "Select checkpoint:", choices=available_checkpoints
         ).ask()
+
+        # Determine if we are resuming or finetuning
+        mode = questionary.select(
+            "Checkpoint mode:",
+            choices=["Resume (Keep optimizer/LR)", "Finetune (New optimizer/LR)"],
+        ).ask()
+
+        if "Resume" in mode:
+            resume_path = checkpoint_path
+        else:
+            finetune_path = checkpoint_path
     else:
         print("No checkpoints found. Starting a fresh run.")
+
+# Prompt for learning rate
+lr = questionary.text("Enter learning rate:", default="3e-4").ask()
+
+# Prompt for layer freezing
+freeze = questionary.confirm("Freeze the first 4 layers?", default=False).ask()
 
 # Prompt user for a run description
 description = questionary.text("Enter a description for this run:").ask()
@@ -61,11 +79,19 @@ cmd = [
     selected_dataset,
     "--description",
     description,
+    "--learning-rate",
+    lr,
 ]
 
-# Add resume argument if a checkpoint was selected
+# Add resume OR finetune argument based on selection
 if resume_path:
     cmd.extend(["--resume-from", resume_path])
+elif finetune_path:
+    cmd.extend(["--finetune-from", finetune_path])
+
+# Add freeze flag if selected
+if freeze:
+    cmd.append("--freeze")
 
 print(f"\nRunning command: {' '.join(cmd)}\n")
 

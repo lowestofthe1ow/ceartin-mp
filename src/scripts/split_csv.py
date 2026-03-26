@@ -1,10 +1,18 @@
+import argparse
 import os
 import re
 
 import pandas as pd
 
-INPUT_FILE = "data/stress-minimal/single.csv"  # Name of your source file
-OUTPUT_FILE = "output_split_single.csv"  # Name of the file to be created
+parser = argparse.ArgumentParser(
+    description="Split CSV rows into individual sentence-phoneme pairs."
+)
+parser.add_argument("input")
+parser.add_argument("output")
+args = parser.parse_args()
+
+INPUT_FILE = args.input
+OUTPUT_FILE = args.output
 
 
 def split_sentence_phoneme_pairs(row):
@@ -12,14 +20,14 @@ def split_sentence_phoneme_pairs(row):
         return []
 
     sentences = re.split(r"(?<=[.!?]) +", str(row["sentence"]))
-
     phonemes = str(row["phoneme"]).split()
 
     results = []
     current_phoneme_idx = 0
 
     for sent in sentences:
-        word_count = len(re.findall(r"\w+", sent))
+        words_in_sent = sent.strip().split()
+        word_count = len(words_in_sent)
 
         sent_phonemes = phonemes[current_phoneme_idx : current_phoneme_idx + word_count]
 
@@ -36,9 +44,10 @@ def split_sentence_phoneme_pairs(row):
     return results
 
 
+# Set up argument parsing
 if not os.path.exists(INPUT_FILE):
     print(f"Error: {INPUT_FILE} not found.")
-    return
+    exit(1)
 
 print(f"Reading {INPUT_FILE}...")
 df = pd.read_csv(INPUT_FILE)
