@@ -11,7 +11,6 @@ DATASETS = [
     "combined",
     "stress",
     "combined-stress",
-    "multitask",
 ]
 DEFAULT_CHECKPOINTS_PATH = "models/checkpoints"
 
@@ -68,6 +67,9 @@ lr = questionary.text("Enter learning rate:", default="3e-4").ask()
 # Prompt for layer freezing
 freeze = questionary.confirm("Freeze the first 4 layers?", default=False).ask()
 
+# Prompt to include word-level data
+include_words = questionary.confirm("Include word-level data?", default=True).ask()
+
 # Prompt user for a run description
 description = questionary.text("Enter a description for this run:").ask()
 
@@ -95,6 +97,9 @@ if resume_path:
     cmd.extend(["--resume-from", resume_path])
 elif finetune_path:
     cmd.extend(["--finetune-from", finetune_path])
+
+if include_words:
+    cmd.extend(["--include-word-level"])
 
 # Add freeze flag if selected
 if freeze:

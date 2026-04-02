@@ -41,6 +41,7 @@ parser.add_argument("--resume-from", default=None)
 parser.add_argument("--finetune-from", default=None)
 parser.add_argument("--freeze", action="store_true")
 parser.add_argument("--learning-rate", type=float, default=3e-4)
+parser.add_argument("--include-word-level", action="store_true")
 args = parser.parse_args()
 
 # Set up dataset CSV paths
@@ -49,11 +50,6 @@ if args.dataset == "tatoeba":
 elif args.dataset == "newsph-nli":
     dataset = ["data/newsph-nli/phonetic_newsph-nli_gemini_2.5_lite.csv"]
 elif args.dataset == "combined":
-    dataset = [
-        "data/tatoeba/phonetic_tatoeba_gemini_3.csv",
-        "data/newsph-nli/phonetic_newsph-nli_gemini_2.5_lite.csv",
-    ]
-elif args.dataset == "multitask":
     dataset = [
         "data/tatoeba/phonetic_tatoeba_gemini_3.csv",
         "data/newsph-nli/phonetic_newsph-nli_gemini_2.5_lite.csv",
@@ -71,6 +67,8 @@ elif args.dataset == "combined-stress":
         "data/stress-minimal/stress-minimal_single_split.csv",
     ]
 
+if args.include_word_level:
+    dataset.append("data/multitask/multitask_ds.csv")
 
 tokenizer = AutoTokenizer.from_pretrained(args.model_id)
 split_dataset = dataset_from_csv_list(dataset, tokenizer)
@@ -113,7 +111,7 @@ training_args = Seq2SeqTrainingArguments(
     lr_scheduler_type="constant_with_warmup",
     warmup_steps=100 if args.dataset == "tatoeba" else 300,
     # --------------------------------------------
-    num_train_epochs=15,  # TODO: Is 10 good?
+    num_train_epochs=10,  # TODO: Is 10 good?
     eval_strategy="epoch",
     save_strategy="epoch",
     save_total_limit=3,
