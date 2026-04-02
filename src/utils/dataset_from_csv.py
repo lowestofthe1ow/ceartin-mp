@@ -9,7 +9,7 @@ def preprocess_function(examples, tokenizer):
     return tokenizer(
         examples["sentence"],
         text_target=examples["phoneme"],
-        max_length=512,  # TODO: Confirm if we're gonna use this limit
+        max_length=256,  # TODO: Confirm if we're gonna use this limit
         padding="max_length",  # Forces everything to have the same length
         truncation=True,  # This truncates when it generates > max_length
     )
@@ -51,6 +51,20 @@ def preprocess_dataset(dataset):
 
 def dataset_from_csv(csv_path, tokenizer):
     dataset = load_dataset("csv", data_files=csv_path)["train"]
+
+    # Filter out duplicate sentences
+    sentences = dataset["sentence"]
+    unique_indices = []
+    seen = set()
+
+    for i, s in enumerate(sentences):
+        if s not in seen:
+            unique_indices.append(i)
+            seen.add(s)
+
+    dataset = dataset.select(unique_indices)
+
+    # Preprocessing
     dataset = preprocess_dataset(dataset)
     tokenized_dataset = dataset.map(
         lambda x: preprocess_function(x, tokenizer), batched=True

@@ -88,7 +88,7 @@ with torch.no_grad():
 
         outputs = model.generate(
             **inputs,
-            max_length=512,
+            max_length=256,
             # repetition_penalty=1.3,
             # sentence=[item["sentence"] * 8],
         )
