@@ -5,7 +5,7 @@ from pathlib import Path
 import questionary
 
 # Define the available datasets for finetuning
-DATASETS = ["tatoeba", "newsph-nli", "combined"]
+DATASETS = ["tatoeba", "newsph-nli", "combined", "multitask"]
 
 
 # Prompt user to select a training set
