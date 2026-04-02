@@ -132,11 +132,11 @@ def validate_characters(answers):
 # Load Tatoeba dataset
 print("Loading dataset...")
 
-# with open("data/newsph-nli/newsph-nli.txt", "r", encoding="utf-8") as f:
-#    sentences = [line.strip() for line in f if line.strip()]
+with open("data/stress-minimal/single.txt", "r", encoding="utf-8") as f:
+    sentences = [line.strip() for line in f if line.strip()]
 
-dataset = load_dataset("tatoeba", "en-tl", lang1="en", lang2="tl")
-sentences = [item["tl"] for item in dataset["train"]["translation"]]
+# dataset = load_dataset("tatoeba", "en-tl", lang1="en", lang2="tl")
+# sentences = [item["tl"] for item in dataset["train"]["translation"]]
 
 results_list = []
 error_count = 0

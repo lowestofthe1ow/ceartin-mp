@@ -11,8 +11,9 @@ from google.genai import types
 from pydantic import BaseModel
 
 
+# TODO: Move these into a separate class
 class Sentence(BaseModel):
-    pronunciation: str
+    pronunciation: int
     sentence: str
 
 
@@ -31,19 +32,25 @@ client = genai.Client(api_key=key, vertexai=True)
 prompt = """
 <instructions>
 The Filipino word given below has several possible pronunciations, given in a
-list. For each unique pronunciation, generate a sentence that uses the word
+list. For each unique pronunciation, generate sentences that use the word
 following the definition that corresponds to the pronunciation. The objective
 is to create a list of sentences (in Filipino, not in IPA) that use the same
-word in different meanings or contexts, three for each definition corresponding
+word in different meanings or contexts, four for each definition corresponding
 to the pronunciations listed. Follow standard Filipino grammar. Exclude all
 diacritics from your responses. You may perform conjugations if applicable.
-Include the word itself and its intended pronunciation for that sentence in
-your response.
+Include the word itself and the index of its intended pronunciation in the list,
+where the first entry is index 1. If any of the pronunciations listed are simply
+variations and do not SIGNIFICANTLY change the meaning of the word, treat them
+as a single pronunciation and generate four sentences using only the FIRST
+pronunciation listed that has that specific meaning. Only in this case are you
+to ignore the other variants. Otherwise, generate four sentences for each
+pronunciation listed as instructed. Each sentence must be a separate entry
+string in the lists of sentences in the output schema.
 </instructions>
-<word>sikat</word>
+<word>bonifacio</word>
 <pronunciations_list>
-si'kat
-'sikat
+boni'paʃo
+boni'faʃo
 </pronunciations_list>
 """
 
@@ -54,14 +61,15 @@ print(prompt)
 print("=" * 40)
 
 response = client.models.generate_content(
-    model="gemini-3.1-flash-lite-preview",
+    model="gemini-2.5-flash",
     contents=prompt,
     config=types.GenerateContentConfig(
         response_mime_type="application/json",
         response_json_schema=Response.model_json_schema(),
         # This is where thinking_level lives
         thinking_config=types.ThinkingConfig(
-            thinking_level="MINIMAL"  # Use uppercase or "minimal"
+            include_thoughts=False,  # Keeps the 'thought' process out of the response
+            thinking_budget=0,  # 0 strictly disables the reasoning stepthinking_level="MINIMAL"),
         ),
     ),
 )

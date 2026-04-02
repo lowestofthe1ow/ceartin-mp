@@ -6,6 +6,7 @@ and PFER.
 # TODO: This needs work.
 
 import argparse
+import csv
 
 import panphon
 import panphon.distance
@@ -70,6 +71,11 @@ total_chars = 0
 
 print(f"Evaluating {len(test_set)} samples from {dataset}")
 
+# Open the CSV file and write the header
+out_file = open("output.csv", "w", encoding="utf-8", newline="")
+csv_writer = csv.writer(out_file)
+csv_writer.writerow(["target", "predicted"])
+
 with torch.no_grad():
     for item in tqdm(test_set):
         target_text = item["phoneme"]
@@ -88,6 +94,9 @@ with torch.no_grad():
         )
         pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         pred_segs = ft.ipa_segs(pred_text)
+
+        # Write the target and prediction to the CSV
+        csv_writer.writerow([target_text, pred_text])
 
         print("-" * 80)
         print(f"Target:  {target_text}\nPredict: {pred_text}")
@@ -123,3 +132,6 @@ print(f"Character Error Rate (CER):         {final_cer:.4f}")
 print(f"Phoneme Error Rate (PER):           {final_per:.4f}")
 print(f"Phonetic Feature Error Rate (PFER): {final_pfer:.4f}")
 print(f"Total reference phonemes:           {total_phonemes}")
+
+# Close the CSV file
+out_file.close()

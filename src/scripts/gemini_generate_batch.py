@@ -4,10 +4,12 @@ pronunciation" requests to the Gemini API via Vertex AI.
 """
 
 import asyncio
+from typing import List
 
 from dotenv import dotenv_values
 from google import genai
 from google.genai import types
+from pydantic import BaseModel
 from tqdm.asyncio import tqdm
 
 from src.datasets.wikipron_tl_df import wikipron_tl_df
@@ -20,9 +22,22 @@ FILE_PATH = config["WIKIPRON_PATH"]
 VERTEX_KEY = config["VERTEX_API_KEY"]
 
 HOMOGRAPHS, _ = wikipron_tl_df(FILE_PATH)
-CONCURRENCY_LIMIT = 80
-OUTPUT_FILENAME = "results_gemini_3.jsonl"
-MODEL_NAME = "gemini-3-flash-preview"
+CONCURRENCY_LIMIT = 25
+OUTPUT_FILENAME = "results_gemini_2.5.jsonl"
+MODEL_NAME = "gemini-2.5-flash"
+
+
+# TODO: Move these into a separate class
+class Sentence(BaseModel):
+    pronunciation: int
+    sentence: str
+
+
+class Response(BaseModel):
+    """JSON schema for Gemini API's structured output"""
+
+    word: str
+    answers: List[Sentence]
 
 
 async def main():
@@ -40,7 +55,10 @@ async def main():
     gen_config = types.GenerateContentConfig(
         response_mime_type="application/json",
         response_json_schema=Response.model_json_schema(),
-        thinking_config=types.ThinkingConfig(thinking_level="MINIMAL"),
+        thinking_config=types.ThinkingConfig(
+            include_thoughts=False,  # Keeps the 'thought' process out of the response
+            thinking_budget=0,  # 0 strictly disables the reasoning stepthinking_level="MINIMAL"),
+        ),
     )
 
     # Set concurrency limits

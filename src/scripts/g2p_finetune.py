@@ -32,9 +32,15 @@ DEFAULT_DATASET_PATH = ["data/tatoeba/phonetic_tatoeba_gemini_3.csv"]
 parser = argparse.ArgumentParser()
 parser.add_argument("--model-id", default=DEFAULT_MODEL_ID)
 parser.add_argument(
-    "--dataset", default="tatoeba", choices=["tatoeba", "newsph-nli", "combined"]
+    "--dataset",
+    default="tatoeba",
+    choices=["tatoeba", "newsph-nli", "combined", "stress", "combined-stress"],
 )
 parser.add_argument("--description", default="sample_finetune")
+parser.add_argument("--resume-from", default=None)
+parser.add_argument("--finetune-from", default=None)
+parser.add_argument("--freeze", action="store_true")
+parser.add_argument("--learning-rate", type=float, default=3e-4)
 args = parser.parse_args()
 
 # Set up dataset CSV paths
@@ -52,17 +58,44 @@ elif args.dataset == "multitask":
         "data/tatoeba/phonetic_tatoeba_gemini_3.csv",
         "data/newsph-nli/phonetic_newsph-nli_gemini_2.5_lite.csv",
     ]
+elif args.dataset == "stress":
+    dataset = [
+        "data/stress-minimal/stress-minimal_ambiguous_split.csv",
+        "data/stress-minimal/stress-minimal_single_split.csv",
+    ]
+elif args.dataset == "combined-stress":
+    dataset = [
+        "data/tatoeba/phonetic_tatoeba_gemini_3.csv",
+        "data/newsph-nli/phonetic_newsph-nli_gemini_2.5_lite.csv",
+        "data/stress-minimal/stress-minimal_ambiguous_split.csv",
+        "data/stress-minimal/stress-minimal_single_split.csv",
+    ]
+
 
 tokenizer = AutoTokenizer.from_pretrained(args.model_id)
 split_dataset = dataset_from_csv_list(dataset, tokenizer)
 
 # Set up model and DataCollator
-model = T5ForConditionalGeneration.from_pretrained(args.model_id)
+if args.finetune_from:
+    model = T5ForConditionalGeneration.from_pretrained(args.finetune_from)
+else:
+    model = T5ForConditionalGeneration.from_pretrained(args.model_id)
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Create a new directory for this run...
 run_id = datetime.now().strftime("%Y-%m-%d_%H-%M")
 custom_path = f"./models/checkpoints/{run_id}_{args.description}"
+
+if args.freeze:
+    for i, block in enumerate(model.encoder.block):
+        if i < 4:
+            for param in block.parameters():
+                param.requires_grad = False
+        else:
+            break
+
+trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Trainable parameters: {trainable_params}")
 
 # Optimizer and trainer configuration
 
@@ -76,11 +109,11 @@ training_args = Seq2SeqTrainingArguments(
     gradient_accumulation_steps=32,
     # --------------------------------------------
     # Use standard ByT5 learning rates...
-    learning_rate=3e-4,
+    learning_rate=args.learning_rate,
     lr_scheduler_type="constant_with_warmup",
     warmup_steps=100 if args.dataset == "tatoeba" else 300,
     # --------------------------------------------
-    num_train_epochs=10,  # TODO: Is 10 good?
+    num_train_epochs=15,  # TODO: Is 10 good?
     eval_strategy="epoch",
     save_strategy="epoch",
     save_total_limit=3,
@@ -88,7 +121,7 @@ training_args = Seq2SeqTrainingArguments(
     # --------------------------------------------
     # Max generated length of 512 for sentences
     predict_with_generate=True,
-    generation_max_length=512,
+    generation_max_length=512,  # 512,
     # --------------------------------------------
     load_best_model_at_end=True,
     metric_for_best_model="loss",
@@ -103,4 +136,7 @@ trainer = Seq2SeqTrainer(
     callbacks=[PreviewCallback(split_dataset["validation"], data_collator, tokenizer)],
 )
 
-trainer.train()
+if args.resume_from:
+    trainer.train(resume_from_checkpoint=args.resume_from)
+else:
+    trainer.train()
