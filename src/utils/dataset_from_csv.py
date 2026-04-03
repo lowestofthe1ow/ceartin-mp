@@ -83,6 +83,9 @@ def dataset_from_csv(csv_path, tokenizer):
     )
 
     split_dataset["train"] = split_dataset["train"].shuffle(seed=RANDOM_STATE)
+    split_dataset["test"] = split_dataset["test"].filter(
+        lambda x: len(x["input_ids"]) <= 256
+    )
 
     return split_dataset
 

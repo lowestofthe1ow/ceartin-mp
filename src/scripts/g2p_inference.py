@@ -28,7 +28,11 @@ model = T5ForConditionalGeneration.from_pretrained(args.checkpoint_path).to(devi
 
 def predict(text):
     inputs = tokenizer(text, return_tensors="pt").to(device)
-    outputs = model.generate(**inputs, max_length=128)
+    outputs = model.generate(
+        **inputs,
+        max_length=256,
+        num_beams=5,
+    )
     return tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]
 
 

@@ -69,6 +69,9 @@ total_cer_dist = 0
 total_phonemes = 0
 total_chars = 0
 
+# Per-sample PER tracking
+sample_pers = []
+
 print(f"Evaluating {len(test_set)} samples from {dataset}")
 
 # Open the CSV file and write the header
@@ -89,8 +92,7 @@ with torch.no_grad():
         outputs = model.generate(
             **inputs,
             max_length=256,
-            # repetition_penalty=1.3,
-            # sentence=[item["sentence"] * 8],
+            num_beams=5,
         )
         pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         pred_segs = ft.ipa_segs(pred_text)
@@ -124,6 +126,10 @@ with torch.no_grad():
         running_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
         print(f"Running PER: {running_per}")
 
+        # Track per-sample PER
+        sample_per = per_dist / len(target_segs)
+        sample_pers.append((sample_per, item["sentence"], target_text, pred_text))
+
 final_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
 final_pfer = total_pfer_dist / total_phonemes if total_phonemes > 0 else 0
 final_cer = total_cer_dist / total_chars if total_chars > 0 else 0
@@ -132,6 +138,15 @@ print(f"Character Error Rate (CER):         {final_cer:.4f}")
 print(f"Phoneme Error Rate (PER):           {final_per:.4f}")
 print(f"Phonetic Feature Error Rate (PFER): {final_pfer:.4f}")
 print(f"Total reference phonemes:           {total_phonemes}")
+
+print("=" * 40)
+print("Top 20 highest PER samples")
+for sample_per, sentence, target_text, pred_text in sorted(sample_pers, reverse=True)[
+    :20
+]:
+    print(f"PER: {sample_per:.4f} | Sentence: {sentence}")
+    print(f"  Target:  {target_text}")
+    print(f"  Predict: {pred_text}")
 
 # Close the CSV file
 out_file.close()
