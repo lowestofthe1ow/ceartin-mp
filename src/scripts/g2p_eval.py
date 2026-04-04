@@ -160,7 +160,9 @@ print("Per-sample error statistics")
 print("-" * 40)
 print(df[["per", "cer", "pfer"]].describe())
 
-df.to_pickle(f"results/output_{Path(args.checkpoint_path).parts[-2]}.pkl")
+df.to_pickle(
+    f"results/output_{Path(args.checkpoint_path).parts[-2]}_{Path(args.checkpoint_path).parts[-1]}_{args.dataset}.pkl"
+)
 
 print("=" * 40)
 print("Top 20 worst PER")
