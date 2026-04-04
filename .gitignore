@@ -2,6 +2,7 @@
 # Main directories .gitignore
 # ==============================================================================
 
+results/
 models/
 pyrightconfig.json
 

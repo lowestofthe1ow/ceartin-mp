@@ -6,7 +6,7 @@ import questionary
 
 DEFAULT_CHECKPOINTS_PATH = "models/checkpoints"
 
-DATASETS = ["tatoeba", "newsph-nli", "combined"]
+DATASETS = ["tatoeba", "newsph-nli", "combined", "manual"]
 
 
 def get_checkpoints(base_dir=DEFAULT_CHECKPOINTS_PATH):

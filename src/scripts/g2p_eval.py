@@ -6,50 +6,59 @@ and PFER.
 # TODO: This needs work.
 
 import argparse
-import csv
+import os
 
+import pandas as pd
 import panphon
 import panphon.distance
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 
-from src.utils.dataset_from_csv import dataset_from_csv_list
+from datasets import concatenate_datasets
+from src.utils.dataset_from_csv import dataset_from_csv, dataset_from_csv_list
 
 DEFAULT_MODEL_ID = "charsiu/g2p_multilingual_byT5_small_100"
-
-DEFAULT_CHECKPOINT = (
-    # "models/checkpoints/2026-03-16_22-45_baseline_combined/checkpoint-3080"
-    "models/checkpoints/2026-03-16_13-52_baseline_tatoeba/checkpoint-455"
-    # "models/checkpoints/2026-03-16_14-27_baseline_combined/checkpoint-2695"
-)
 DEFAULT_DATASET_PATH = "data/combined.csv"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model-id", default=DEFAULT_MODEL_ID)
-parser.add_argument("--checkpoint-path", default=DEFAULT_CHECKPOINT)
+parser.add_argument("--checkpoint-path", default="")
 parser.add_argument(
-    "--dataset", default="tatoeba", choices=["tatoeba", "newsph-nli", "combined"]
+    "--dataset",
+    default="tatoeba",
+    choices=["tatoeba", "newsph-nli", "combined", "manual"],
 )
 args = parser.parse_args()
+
+os.makedirs("results", exist_ok=True)
+
+# Use default tokenizer with CharsiuG2P ByT5
+tokenizer = AutoTokenizer.from_pretrained(args.model_id)
 
 # Set up dataset CSV paths
 if args.dataset == "tatoeba":
     dataset = ["data/tatoeba/phonetic_tatoeba_gemini_3.csv"]
+    split_dataset = dataset_from_csv_list(dataset, tokenizer)
 elif args.dataset == "newsph-nli":
     dataset = ["data/newsph-nli/phonetic_newsph-nli_gemini_2.5_lite.csv"]
+    split_dataset = dataset_from_csv_list(dataset, tokenizer)
 elif args.dataset == "combined":
     dataset = [
         "data/tatoeba/phonetic_tatoeba_gemini_3.csv",
         "data/newsph-nli/phonetic_newsph-nli_gemini_2.5_lite.csv",
     ]
+    split_dataset = dataset_from_csv_list(dataset, tokenizer)
+elif args.dataset == "manual":
+    dataset = "data/manual_set.csv"
+
+    # TODO: Dumb hack but whatever lol
+    split_dataset = dataset_from_csv(dataset, tokenizer)
+    split_dataset["test"] = concatenate_datasets(list(split_dataset.values()))
 
 # Use CUDA if available
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-tokenizer = AutoTokenizer.from_pretrained(args.model_id)
-
-# TODO: Add to CLI
 model = T5ForConditionalGeneration.from_pretrained(args.checkpoint_path)
 model.to(device)
 model.eval()
@@ -59,7 +68,6 @@ ft = panphon.FeatureTable()
 dst = panphon.distance.Distance()
 
 # Get the test split
-split_dataset = dataset_from_csv_list(dataset, tokenizer)
 test_set = split_dataset["test"]
 
 # Running sums
@@ -69,15 +77,9 @@ total_cer_dist = 0
 total_phonemes = 0
 total_chars = 0
 
-# Per-sample PER tracking
-sample_pers = []
+output = []
 
 print(f"Evaluating {len(test_set)} samples from {dataset}")
-
-# Open the CSV file and write the header
-out_file = open("output.csv", "w", encoding="utf-8", newline="")
-csv_writer = csv.writer(out_file)
-csv_writer.writerow(["target", "predicted"])
 
 with torch.no_grad():
     for item in tqdm(test_set):
@@ -97,38 +99,44 @@ with torch.no_grad():
         pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         pred_segs = ft.ipa_segs(pred_text)
 
-        # Write the target and prediction to the CSV
-        csv_writer.writerow([target_text, pred_text])
-
         print("-" * 80)
         print(f"Target:  {target_text}\nPredict: {pred_text}")
 
-        # Calculate PER
+        # Calculate PER distance (does not include normalization yet)
         per_dist = dst.levenshtein_distance(pred_segs, target_segs)
 
-        # Calculate PFER (we need a try-catch in case Panphon alignment dies)
+        # Calculate PFER distance (we need a try-catch in case Panphon alignment dies)
         try:
             pfer_dist = dst.feature_edit_distance(pred_text, target_text)
         except ValueError:
             pfer_dist = len(target_segs)
 
-        # Calculate CER (Levenshtein on raw characters)
+        # Calculate CER distance (Levenshtein on raw characters)
         cer_dist = dst.levenshtein_distance(pred_text, target_text)
 
-        # Add to the summation
+        # Add to the "pooled" summation
+        # For corpus-level PER/CER/PFER, this is used to normalize by entire
+        # corpus length
         total_per_dist += per_dist
         total_pfer_dist += pfer_dist
         total_cer_dist += cer_dist
-
         total_phonemes += len(target_segs)
         total_chars += len(target_text)
 
         running_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
         print(f"Running PER: {running_per}")
 
-        # Track per-sample PER
-        sample_per = per_dist / len(target_segs)
-        sample_pers.append((sample_per, item["sentence"], target_text, pred_text))
+        # For sample-level PER/CER/PFER, normalize by sample lengths
+        output.append(
+            {
+                "sentence": item["sentence"],
+                "target": target_text,
+                "predicted": pred_text,
+                "per": per_dist / len(target_segs),
+                "cer": cer_dist / len(target_text) if len(target_text) > 0 else 0,
+                "pfer": pfer_dist / len(target_segs),
+            }
+        )
 
 final_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
 final_pfer = total_pfer_dist / total_phonemes if total_phonemes > 0 else 0
@@ -139,14 +147,16 @@ print(f"Phoneme Error Rate (PER):           {final_per:.4f}")
 print(f"Phonetic Feature Error Rate (PFER): {final_pfer:.4f}")
 print(f"Total reference phonemes:           {total_phonemes}")
 
-print("=" * 40)
-print("Top 20 highest PER samples")
-for sample_per, sentence, target_text, pred_text in sorted(sample_pers, reverse=True)[
-    :20
-]:
-    print(f"PER: {sample_per:.4f} | Sentence: {sentence}")
-    print(f"  Target:  {target_text}")
-    print(f"  Predict: {pred_text}")
+df = pd.DataFrame(output)
+df.to_csv(f"results/output_.csv", index=False)
 
-# Close the CSV file
-out_file.close()
+print("=" * 40)
+print("Top 20 worst PER")
+print("-" * 40)
+
+for _, row in df.nlargest(20, "per").iterrows():
+    print(f"PER:      {row['per']:.4f}")
+    print(f"Sentence: {row['sentence']}")
+    print(f"Target:   {row['target']}")
+    print(f"Predict:  {row['predicted']}")
+    print("-" * 40)

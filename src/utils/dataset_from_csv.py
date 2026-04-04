@@ -64,6 +64,10 @@ def dataset_from_csv(csv_path, tokenizer):
 
     dataset = dataset.select(unique_indices)
 
+    dataset = dataset.filter(
+        lambda x: x["phoneme"] is not None and str(x["phoneme"]).strip() != ""
+    )
+
     # Preprocessing
     dataset = preprocess_dataset(dataset)
     tokenized_dataset = dataset.map(
