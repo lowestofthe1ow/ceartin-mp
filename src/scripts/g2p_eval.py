@@ -7,8 +7,10 @@ and PFER.
 
 import argparse
 import os
+import re
 from pathlib import Path
 
+import epitran
 import pandas as pd
 import panphon
 import panphon.distance
@@ -18,6 +20,51 @@ from transformers import AutoTokenizer, T5ForConditionalGeneration
 
 from datasets import concatenate_datasets
 from src.utils.dataset_from_csv import dataset_from_csv, dataset_from_csv_list
+
+
+def normalize_characters(text):
+    """Normalizes the characters in a string to the phoneme inventory above"""
+
+    if not text:
+        return ""
+
+    # TODO: Can look into the following mappings:
+    # "ɛ": "e", "ɪ": "i", "ʊ": "u", "ɔ": "o", "ɑ": "a",
+    replacements = {
+        "g": "ɡ",
+        "r": "ɾ",
+        "ɹ": "ɾ",
+        ",": "ˌ",
+        "Ɂ": "ʔ",
+        ".": "",
+        "ˈ": "'",
+        "‍": "",  # Zero-width joiner that Gemini hallucinates sometimes
+        # For Gemini 2.5-Flash-Lite output
+        "ɛ": "e",
+        "ɪ": "i",
+        "ʊ": "u",
+        "ɔ": "o",
+        "ɑ": "a",
+        "æ": "a",
+        ":": "",
+        "꞉": "",
+        "ː": "",
+        "\u200b": "",  # Zero-width space
+        "ɐ": "a",
+        "á": "a",
+        "ʌ": "a",
+        "ɭ": "l",
+        "ʤ": "dʒ",
+        "ɕ": "ʃ",
+    }
+
+    text = text.replace(".", "")  # Remove syllable markers
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    return re.sub(r"\s+", " ", text).strip()
+
 
 DEFAULT_MODEL_ID = "charsiu/g2p_multilingual_byT5_small_100"
 DEFAULT_DATASET_PATH = "data/combined.csv"
@@ -30,10 +77,11 @@ parser.add_argument(
     default="tatoeba",
     choices=["tatoeba", "newsph-nli", "combined", "manual"],
 )
+parser.add_argument("--base-model", action="store_true")
+parser.add_argument("--epitran", action="store_true")
 args = parser.parse_args()
 
 os.makedirs("results", exist_ok=True)
-
 # Use default tokenizer with CharsiuG2P ByT5
 tokenizer = AutoTokenizer.from_pretrained(args.model_id)
 
@@ -60,9 +108,13 @@ elif args.dataset == "manual":
 # Use CUDA if available
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-model = T5ForConditionalGeneration.from_pretrained(args.checkpoint_path)
-model.to(device)
-model.eval()
+if args.epitran:
+    epi = epitran.Epitran("tgl-Latn")
+else:
+    load_path = args.model_id if args.base_model else args.checkpoint_path
+    model = T5ForConditionalGeneration.from_pretrained(load_path)
+    model.to(device)
+    model.eval()
 
 # Use Panphon's built in tools, less of a headache this way
 ft = panphon.FeatureTable()
@@ -90,14 +142,32 @@ with torch.no_grad():
         if not target_segs:
             continue
 
-        inputs = tokenizer(item["sentence"], return_tensors="pt").to(device)
+        if args.epitran:
+            raw_sentence = item["sentence"].strip()
+            raw_pred = epi.transliterate(raw_sentence)
+            pred_text = normalize_characters(raw_pred)
+        elif args.base_model:
+            raw_sentence = item["sentence"].strip()
+            words = raw_sentence.split()
 
-        outputs = model.generate(
-            **inputs,
-            max_length=256,
-            num_beams=5,
-        )
-        pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            predicted_words = []
+            for word in words:
+                input_text = f"<tgl>: {word}"
+                inputs = tokenizer(input_text, return_tensors="pt").to(device)
+                outputs = model.generate(**inputs, max_length=50)
+                decoded_word = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                predicted_words.append(normalize_characters(decoded_word))
+
+            pred_text = " ".join(predicted_words)
+        else:
+            inputs = tokenizer(item["sentence"], return_tensors="pt").to(device)
+            outputs = model.generate(
+                **inputs,
+                max_length=256,
+                num_beams=5,
+            )
+            pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
         pred_segs = ft.ipa_segs(pred_text)
 
         # print("-" * 80)
@@ -160,9 +230,14 @@ print("Per-sample error statistics")
 print("-" * 40)
 print(df[["per", "cer", "pfer"]].describe())
 
-df.to_pickle(
-    f"results/output_{Path(args.checkpoint_path).parts[-2]}_{Path(args.checkpoint_path).parts[-1]}_{args.dataset}.pkl"
-)
+if args.epitran:
+    df.to_pickle(f"results/output_epitran_{args.dataset}.pkl")
+elif args.base_model:
+    df.to_pickle(f"results/output_base_{args.dataset}.pkl")
+else:
+    df.to_pickle(
+        f"results/output_{Path(args.checkpoint_path).parts[-2]}_{Path(args.checkpoint_path).parts[-1]}_{args.dataset}.pkl"
+    )
 
 print("=" * 40)
 print("Top 20 worst PER")

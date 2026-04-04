@@ -25,6 +25,8 @@ def get_checkpoints(base_dir=DEFAULT_CHECKPOINTS_PATH):
 
 # List all available checkpoints
 checkpoints = get_checkpoints()
+checkpoints = ["BASE MODEL (Charsiu byT5)", "Epitran"] + checkpoints
+
 if not checkpoints:
     print("No checkpoints found.")
     sys.exit(1)
@@ -54,11 +56,16 @@ cmd = [
     "python3",
     "-m",
     "src.scripts.g2p_eval",
-    "--checkpoint-path",
-    selected_checkpoint,
     "--dataset",
     selected_dataset,
 ]
+
+if selected_checkpoint == "BASE MODEL (Charsiu byT5)":
+    cmd.append("--base-model")
+elif selected_checkpoint == "Epitran":
+    cmd.append("--epitran")
+else:
+    cmd.extend(["--checkpoint-path", selected_checkpoint])
 
 print(f"\nRunning command: {' '.join(cmd)}\n")
 
