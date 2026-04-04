@@ -7,6 +7,7 @@ and PFER.
 
 import argparse
 import os
+from pathlib import Path
 
 import pandas as pd
 import panphon
@@ -138,17 +139,28 @@ with torch.no_grad():
             }
         )
 
+# Pooled statistics
 final_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
 final_pfer = total_pfer_dist / total_phonemes if total_phonemes > 0 else 0
 final_cer = total_cer_dist / total_chars if total_chars > 0 else 0
 
+print("=" * 40)
+print("Pooled error statistics")
+print("-" * 40)
 print(f"Character Error Rate (CER):         {final_cer:.4f}")
 print(f"Phoneme Error Rate (PER):           {final_per:.4f}")
 print(f"Phonetic Feature Error Rate (PFER): {final_pfer:.4f}")
 print(f"Total reference phonemes:           {total_phonemes}")
 
+# Convert per-sample results to Pandas
 df = pd.DataFrame(output)
-df.to_csv(f"results/output_.csv", index=False)
+
+print("-" * 40)
+print("Per-sample error statistics")
+print("-" * 40)
+print(df[["per", "cer", "pfer"]].describe())
+
+df.to_pickle(f"results/output_{Path(args.checkpoint_path).parts[-2]}.pkl")
 
 print("=" * 40)
 print("Top 20 worst PER")
