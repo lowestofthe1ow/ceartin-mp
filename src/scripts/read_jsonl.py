@@ -77,7 +77,8 @@ def normalize_characters(text):
         "g": "ɡ",
         "r": "ɾ",
         "ɹ": "ɾ",
-        ",": "ˌ",
+        ",": "",
+        "ˌ": "",
         "Ɂ": "ʔ",
         ".": "",
         "ˈ": "'",
@@ -129,88 +130,89 @@ def validate_characters(answers):
     return True
 
 
-# Load Tatoeba dataset
-print("Loading dataset...")
+if __name__ == "__main__":
+    # Load Tatoeba dataset
+    print("Loading dataset...")
 
-with open("data/stress-minimal/single.txt", "r", encoding="utf-8") as f:
-    sentences = [line.strip() for line in f if line.strip()]
+    with open("data/stress-minimal/single.txt", "r", encoding="utf-8") as f:
+        sentences = [line.strip() for line in f if line.strip()]
 
-# dataset = load_dataset("tatoeba", "en-tl", lang1="en", lang2="tl")
-# sentences = [item["tl"] for item in dataset["train"]["translation"]]
+    # dataset = load_dataset("tatoeba", "en-tl", lang1="en", lang2="tl")
+    # sentences = [item["tl"] for item in dataset["train"]["translation"]]
 
-results_list = []
-error_count = 0
-invalid_responses = 0
+    results_list = []
+    error_count = 0
+    invalid_responses = 0
 
-with open(args.dataset_path, "r", encoding="utf-8") as f:
-    total_lines = sum(1 for _ in f)
+    with open(args.dataset_path, "r", encoding="utf-8") as f:
+        total_lines = sum(1 for _ in f)
 
-with open(args.dataset_path, "r", encoding="utf-8") as f:
-    for line in tqdm(f, total=total_lines, desc="Processing JSONL", unit="line"):
+    with open(args.dataset_path, "r", encoding="utf-8") as f:
+        for line in tqdm(f, total=total_lines, desc="Processing JSONL", unit="line"):
 
-        # TODO: This part needs cleaning up
+            # TODO: This part needs cleaning up
 
-        data = json.loads(line)
-        idx = data.get("index")
+            data = json.loads(line)
+            idx = data.get("index")
 
-        if idx is None or (idx - 1) >= len(sentences) or (idx - 1) < 0:
-            continue
+            if idx is None or (idx - 1) >= len(sentences) or (idx - 1) < 0:
+                continue
 
-        sentence = sentences[idx - 1]
+            sentence = sentences[idx - 1]
 
-        if not sentence or not str(sentence).strip():
-            continue
+            if not sentence or not str(sentence).strip():
+                continue
 
-        try:
-            _, _, output_template = homographs(sentence)
-        except Exception:
-            continue
+            try:
+                _, _, output_template = homographs(sentence)
+            except Exception:
+                continue
 
-        output_string = None
-        status = None
+            output_string = None
+            status = None
 
-        if data.get("success") is True:
-            answers = data["content"]["answers"]
-            answers = [normalize_characters(a) for a in answers]
+            if data.get("success") is True:
+                answers = data["content"]["answers"]
+                answers = [normalize_characters(a) for a in answers]
 
-            if validate_characters(answers):
-                try:
-                    output_string = fill_template(output_template, answers)
-                    status = "success"
-                except StopIteration:
-                    error_count += 1
-                    continue
-                except Exception:
-                    error_count += 1
-                    continue
-        elif data.get("error") == "ERR_EMPTY_PROMPT":
-            # Case when no ambiguous words were found
-            output_string = " ".join(output_template)
-            status = "empty_prompt_fallback"
-        else:
-            invalid_responses += 1
-            continue
+                if validate_characters(answers):
+                    try:
+                        output_string = fill_template(output_template, answers)
+                        status = "success"
+                    except StopIteration:
+                        error_count += 1
+                        continue
+                    except Exception:
+                        error_count += 1
+                        continue
+            elif data.get("error") == "ERR_EMPTY_PROMPT":
+                # Case when no ambiguous words were found
+                output_string = " ".join(output_template)
+                status = "empty_prompt_fallback"
+            else:
+                invalid_responses += 1
+                continue
 
-        if output_string and str(output_string).strip():
-            results_list.append(
-                {
-                    "index": idx,
-                    "sentence": sentence,
-                    "phoneme": output_string,
-                    "status": status,
-                }
-            )
+            if output_string and str(output_string).strip():
+                results_list.append(
+                    {
+                        "index": idx,
+                        "sentence": sentence,
+                        "phoneme": output_string,
+                        "status": status,
+                    }
+                )
 
-df = pd.DataFrame(results_list)
-df = df.drop(columns=["status"])
-df["phoneme"] = df["phoneme"].apply(normalize_characters)
-df.to_csv(args.output, index=False, encoding="utf-8")
+    df = pd.DataFrame(results_list)
+    df = df.drop(columns=["status"])
+    df["phoneme"] = df["phoneme"].apply(normalize_characters)
+    df.to_csv(args.output, index=False, encoding="utf-8")
 
-print("=" * 40)
-print("Summary")
-print("-" * 40)
-print(f"Total lines in JSONL: {total_lines}")
-print(f"Valid entries: {len(df)}")
-print(f"Template mismatches : {error_count}")
-print(f"Invalid API responses: {invalid_responses}")
-print("=" * 40)
+    print("=" * 40)
+    print("Summary")
+    print("-" * 40)
+    print(f"Total lines in JSONL: {total_lines}")
+    print(f"Valid entries: {len(df)}")
+    print(f"Template mismatches : {error_count}")
+    print(f"Invalid API responses: {invalid_responses}")
+    print("=" * 40)

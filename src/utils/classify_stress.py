@@ -120,50 +120,45 @@ def compute_metrics(y_true, y_pred):
 def run_evaluation(pkl_path: str):
     y_true, y_pred, table_rows = [], [], []
 
-    try:
-        # Load the pickle file as a pandas DataFrame
-        df = pd.read_pickle(pkl_path)
+    df = pd.read_pickle(pkl_path)
 
-        # iterrows() yields (index, Series). We wrap it in enumerate to keep your 1-based row_idx
-        for row_idx, (_, row) in enumerate(df.iterrows(), 1):
+    for row_idx, (_, row) in enumerate(df.iterrows(), 1):
+        grapheme_words = str(row.get("sentence", "")).split()
+        target_words = str(row.get("target", "")).split()
+        pred_words = str(row.get("predicted", "")).split()
 
-            # row is now a pandas Series, which supports .get() just like a dict
-            # sentence-to-word breakdown
-            grapheme_words = str(row.get("sentence", "")).split()
-            target_words = str(row.get("target", "")).split()
-            pred_words = str(row.get("predicted", "")).split()
+        for g, t, p in zip(grapheme_words, target_words, pred_words):
+            # TODO: Can comment this out to include everything
+            if g in NON_HOMOGRAPHS_SET:
+                continue
 
-            # word-for-word comparison part thru zip
-            for g, t, p in zip(grapheme_words, target_words, pred_words):
+            tc = classify_stress(t)
+            pc = classify_stress(p)
+            match = "yes" if tc == pc else "no"
 
-                if g in NON_HOMOGRAPHS_SET:
-                    continue
+            table_rows.append((row_idx, t, tc, p, pc, match))
+            y_true.append(tc)
+            y_pred.append(pc)
 
-                tc = classify_stress(t)
-                pc = classify_stress(p)
-                match = "yes" if tc == pc else "no"
+    metrics, confusion_matrix = compute_metrics(y_true, y_pred)
+    metrics_df = pd.DataFrame(metrics).T
+    metrics_df.index.name = "Class"
 
-                # [ (row, target, t_class, pred, p_class, match), ... ]
-                table_rows.append((row_idx, t, tc, p, pc, match))
-                y_true.append(tc)
-                y_pred.append(pc)
+    print("Metrics")
+    print(metrics_df)
 
-        metrics, confusion_matrix = compute_metrics(y_true, y_pred)
-        metrics_df = pd.DataFrame(metrics).T
-        metrics_df.index.name = "Class"
+    print("\nMetrics (LaTeX)")
+    print(metrics_df.to_latex(index=True, float_format="%.2f"))
 
-        print("Metrics")
-        print(metrics_df)
+    print("Confusion matrix")
+    print(confusion_matrix)
 
-        print("\nMetrics (LaTeX)")
-        print(metrics_df.to_latex(index=True, float_format="%.2f"))
+    for y in range(num_classes := len(CLASSES)):
+        for x in range(num_classes):
+            val = confusion_matrix.iloc[y, x]
+            print(f"{x} {y} {val:.2f}")
 
-        print("Confusion matrix")
-        print(confusion_matrix)
-
-    except FileNotFoundError:
-        print(f"Error: PKL file not found at {pkl_path}")
-        return
+        print()
 
 
 run_evaluation(

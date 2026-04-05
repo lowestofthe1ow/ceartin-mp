@@ -42,9 +42,37 @@ manual_sentences = set(manual_set["sentence"])
 
 leakage = train_sentences.intersection(manual_sentences)
 
+# 1. Flatten sentences into sets of unique words (lowercased for better matching)
+train_words = {word for sent in train_sentences for word in sent.lower().split()}
+manual_words = {word for sent in manual_sentences for word in sent.lower().split()}
+
+# 2. Find the intersection (seen words)
+seen_words = manual_words.intersection(train_words)
+unseen_words = manual_words - train_words
+
+print(f"Unique words in training: {len(train_words)}")
+print(f"Unique words in manual set: {len(manual_words)}")
+print(f"Seen words: {len(seen_words)} ({len(seen_words)/len(manual_words):.2%})")
+print(f"Unseen words: {len(unseen_words)} ({len(unseen_words)/len(manual_words):.2%})")
+
+if len(unseen_words) > 0:
+    print(f"Sample OOV words: {list(unseen_words)[:10]}")
+
 if len(leakage) > 0:
     print(f"Found {len(leakage)} leaking examples")
     for i, sentence in enumerate(list(leakage)[:5]):
         print(f"{i+1}. {sentence}")
+
+    train_set_cleaned = manual_set.filter(
+        lambda example: example["sentence"] not in leakage
+    )
+    cols_to_remove = [
+        col
+        for col in train_set_cleaned.column_names
+        if col not in ["sentence", "phoneme"]
+    ]
+    train_set_final = train_set_cleaned.remove_columns(cols_to_remove)
+
+    train_set_final.to_csv("data/manual_set_noleak.csv", index=False)
 else:
     print("No leakage detected")
