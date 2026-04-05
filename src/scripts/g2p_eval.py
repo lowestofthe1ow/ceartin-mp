@@ -10,7 +10,6 @@ import os
 import re
 from pathlib import Path
 
-import epitran
 import pandas as pd
 import panphon
 import panphon.distance
@@ -168,10 +167,15 @@ with torch.no_grad():
             )
             pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
+        outputs = model.generate(
+            **inputs,
+            max_length=256,
+        )
+        pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         pred_segs = ft.ipa_segs(pred_text)
 
-        # print("-" * 80)
-        # print(f"Target:  {target_text}\nPredict: {pred_text}")
+        print("-" * 80)
+        print(f"Target:  {target_text}\nPredict: {pred_text}")
 
         # Calculate PER distance (does not include normalization yet)
         per_dist = dst.levenshtein_distance(pred_segs, target_segs)
@@ -195,7 +199,7 @@ with torch.no_grad():
         total_chars += len(target_text)
 
         running_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
-        # print(f"Running PER: {running_per}")
+        print(f"Running PER: {running_per}")
 
         # For sample-level PER/CER/PFER, normalize by sample lengths
         output.append(

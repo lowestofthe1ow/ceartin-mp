@@ -56,6 +56,8 @@ cmd = [
     "python3",
     "-m",
     "src.scripts.g2p_eval",
+    "--checkpoint-path",
+    selected_checkpoint,
     "--dataset",
     selected_dataset,
 ]
