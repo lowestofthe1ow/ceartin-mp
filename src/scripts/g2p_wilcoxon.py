@@ -17,6 +17,8 @@ Tatoeba+NewsPH
 Tatoeba+NewsPH+Word
 Tatoeba+NewsPH+Stress
 Tatoeba+NewsPH+Stress+Word
+Tatoeba+NewsPH+Stress+Word (30%)
+Tatoeba+NewsPH+Stress+Word (50%)
 """
 CHECKPOINTS = [
     "890",
@@ -43,7 +45,9 @@ def load_pkl(path):
 
 def get_checkpoint_pkl(checkpoint):
     pattern = f"{RESULTS_DIR}/*.pkl"
-    matches = [p for p in glob.glob(pattern) if (checkpoint in p and "manual" in p)]
+    matches = [
+        p for p in glob.glob(pattern) if (checkpoint in p and "tatoeba.pkl" in p)
+    ]
     return matches[0]
 
 
@@ -89,9 +93,25 @@ def format_p_values(p):
     return f"{p:.4f}"
 
 
+new_names = [
+    "Tatoeba",
+    "Tatoeba+Word",
+    "Tatoeba+Stress+Word",
+    "Tatoeba+NewsPH",
+    "Tatoeba+NewsPH+Word",
+    "Tatoeba+NewsPH+Stress",
+    "Tatoeba+NewsPH+Stress+Word",
+    "Tatoeba+NewsPH+Stress+Word (30\% prune)",
+    "Tatoeba+NewsPH+Stress+Word (50\% prune)",
+]
+
+summaries = []
+
 for metric in METRICS:
     print(f"Performing pairwise Wilcoxon for {metric}...")
     stat_df, pval_df = pairwise_wilcoxon(data, metric)
+
+    stat_df.index = stat_df.columns = pval_df.index = pval_df.columns = new_names
 
     out_stat = f"{RESULTS_DIR}/wilcoxon_{metric}_wstat.csv"
     out_pval = f"{RESULTS_DIR}/wilcoxon_{metric}_pvalue.csv"
@@ -101,6 +121,11 @@ for metric in METRICS:
 
     # Apply the formatting to the entire dataframe
     latex_ready_df = pval_df.map(format_p_values)
+    formatted_stat = stat_df.map(lambda x: f"{x:,.0f}" if pd.notna(x) else "")
+
+    for i in range(len(latex_ready_df)):
+        for j in range(i + 1, len(latex_ready_df)):
+            latex_ready_df.iloc[j, i] = formatted_stat.iloc[i, j]
 
     # Export to LaTeX code
     print(
@@ -115,3 +140,20 @@ for metric in METRICS:
 
     print(pval_df)
     print("-" * 40)
+
+    summary = pd.DataFrame(
+        {
+            "pooled": 0,
+            "mean": [data[chk][metric].mean() * 100 for chk in CHECKPOINTS],
+            "std": [data[chk][metric].std() * 100 for chk in CHECKPOINTS],
+        },
+        index=new_names,
+    )
+
+    summaries.append(summary)
+
+
+combined_df = pd.concat(summaries, axis=1)
+print(f"Descriptive statistics for {metric.upper()}:")
+print(combined_df.to_latex(index=True, float_format="%.2f"))
+print("=" * 40)

@@ -1,10 +1,10 @@
-,890,2415,4207,2928,4354,6399,9670,pruned_model30,pruned_model50
-890,,5072.5,11434.5,12123.0,10916.5,7505.5,7062.5,6546.0,17359.0
-2415,,,10457.5,11667.5,11933.5,7585.0,6714.5,7604.5,16983.0
-4207,,,,7162.5,7413.0,1379.0,1676.0,3860.0,7052.5
-2928,,,,,2889.0,3929.5,3641.5,4561.0,14012.5
-4354,,,,,,3142.0,3509.5,4124.5,12402.0
-6399,,,,,,,1419.0,1862.0,5079.0
-9670,,,,,,,,1548.5,4486.0
-pruned_model30,,,,,,,,,4956.5
-pruned_model50,,,,,,,,,
+,Tatoeba,Tatoeba+Word,Tatoeba+Stress+Word,Tatoeba+NewsPH,Tatoeba+NewsPH+Word,Tatoeba+NewsPH+Stress,Tatoeba+NewsPH+Stress+Word,Tatoeba+NewsPH+Stress+Word (30\% prune),Tatoeba+NewsPH+Stress+Word (50\% prune)
+Tatoeba,,583.0,2354.0,930.0,880.0,1217.0,1041.5,873.0,1561.5
+Tatoeba+Word,,,2331.5,1587.5,1451.0,1316.0,1016.0,1052.5,2216.0
+Tatoeba+Stress+Word,,,,1966.5,2274.0,1147.0,1042.5,1433.5,3735.5
+Tatoeba+NewsPH,,,,,308.5,776.0,678.5,704.5,1454.0
+Tatoeba+NewsPH+Word,,,,,,696.0,787.0,571.5,1373.0
+Tatoeba+NewsPH+Stress,,,,,,,402.5,686.0,1532.5
+Tatoeba+NewsPH+Stress+Word,,,,,,,,580.5,1035.5
+Tatoeba+NewsPH+Stress+Word (30\% prune),,,,,,,,,523.5
+Tatoeba+NewsPH+Stress+Word (50\% prune),,,,,,,,,

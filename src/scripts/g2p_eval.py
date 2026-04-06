@@ -160,22 +160,12 @@ with torch.no_grad():
             pred_text = " ".join(predicted_words)
         else:
             inputs = tokenizer(item["sentence"], return_tensors="pt").to(device)
-            outputs = model.generate(
-                **inputs,
-                max_length=256,
-                num_beams=5,
-            )
+            outputs = model.generate(**inputs, max_length=256)
             pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            pred_segs = ft.ipa_segs(pred_text)
 
-        outputs = model.generate(
-            **inputs,
-            max_length=256,
-        )
-        pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        pred_segs = ft.ipa_segs(pred_text)
-
-        print("-" * 80)
-        print(f"Target:  {target_text}\nPredict: {pred_text}")
+        # print("-" * 80)
+        # print(f"Target:  {target_text}\nPredict: {pred_text}")
 
         # Calculate PER distance (does not include normalization yet)
         per_dist = dst.levenshtein_distance(pred_segs, target_segs)
@@ -198,8 +188,8 @@ with torch.no_grad():
         total_phonemes += len(target_segs)
         total_chars += len(target_text)
 
-        running_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
-        print(f"Running PER: {running_per}")
+        # running_per = total_per_dist / total_phonemes if total_phonemes > 0 else 0
+        # print(f"Running PER: {running_per}")
 
         # For sample-level PER/CER/PFER, normalize by sample lengths
         output.append(
@@ -242,6 +232,18 @@ else:
     df.to_pickle(
         f"results/output_{Path(args.checkpoint_path).parts[-2]}_{Path(args.checkpoint_path).parts[-1]}_{args.dataset}.pkl"
     )
+
+print("=" * 40)
+print("LaTeX table row output")
+print("-" * 40)
+
+latex_row = (
+    f"& {final_per * 100:.2f} & {df['per'].mean() * 100:.2f} & {df['per'].std() * 100:.2f} "
+    f"& {final_cer * 100:.2f} & {df['cer'].mean() * 100:.2f} & {df['cer'].std() * 100:.2f} "
+    f"& {final_pfer * 100:.2f} & {df['pfer'].mean() * 100:.2f} & {df['pfer'].std() * 100:.2f} \\\\"
+)
+
+print(latex_row)
 
 print("=" * 40)
 print("Top 20 worst PER")
