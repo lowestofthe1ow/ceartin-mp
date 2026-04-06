@@ -10,10 +10,12 @@ import os
 import re
 from pathlib import Path
 
+import epitran
 import pandas as pd
 import panphon
 import panphon.distance
 import torch
+from safetensors.torch import load_file
 from tqdm import tqdm
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 
@@ -111,9 +113,60 @@ if args.epitran:
     epi = epitran.Epitran("tgl-Latn")
 else:
     load_path = args.model_id if args.base_model else args.checkpoint_path
-    model = T5ForConditionalGeneration.from_pretrained(load_path)
+
+    if args.base_model:
+        model = T5ForConditionalGeneration.from_pretrained(load_path)
+    else:
+        print(f"Loading base architecture from {args.model_id}...")
+        model = T5ForConditionalGeneration.from_pretrained(args.model_id)
+
+        sf_path = os.path.join(load_path, "model.safetensors")
+        bin_path = os.path.join(load_path, "pytorch_model.bin")
+
+        state_dict = None
+        if os.path.exists(sf_path):
+            print(f"Loading pruned weights from {sf_path}...")
+            state_dict = load_file(sf_path)
+        elif os.path.exists(bin_path):
+            print(f"Loading pruned weights from {bin_path}...")
+            state_dict = torch.load(bin_path, map_location="cpu")
+        else:
+            print(
+                "Warning: Could not find local weight files. Falling back to default loader."
+            )
+            model = T5ForConditionalGeneration.from_pretrained(load_path)
+
+        if state_dict is not None:
+            keys = list(state_dict.keys())
+            for k in keys:
+                if k.endswith("_mask"):
+                    orig_key = k.replace("_mask", "_orig")
+                    weight_key = k.replace("_mask", "")
+
+                    if orig_key in state_dict:
+                        state_dict[weight_key] = state_dict[orig_key] * state_dict[k]
+
+                        del state_dict[orig_key]
+                        del state_dict[k]
+
+            model.load_state_dict(state_dict, strict=False)
+            print("Successfully resolved and applied pruned weights!")
+
     model.to(device)
     model.eval()
+
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    non_zero_params = sum((p != 0).sum().item() for p in model.parameters())
+    sparsity = 100 * (1 - non_zero_params / total_params)
+
+    print("\n" + "=" * 40)
+    print(f"MODEL STATISTICS")
+    print("-" * 40)
+    print(f"Total Parameters:    {total_params:,}")
+    print(f"Non-Zero Params:     {non_zero_params:,}")
+    print(f"Active Sparsity:     {sparsity:.2f}%")
+    print("=" * 40 + "\n")
 
 # Use Panphon's built in tools, less of a headache this way
 ft = panphon.FeatureTable()
@@ -162,7 +215,8 @@ with torch.no_grad():
             inputs = tokenizer(item["sentence"], return_tensors="pt").to(device)
             outputs = model.generate(**inputs, max_length=256)
             pred_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            pred_segs = ft.ipa_segs(pred_text)
+
+        pred_segs = ft.ipa_segs(pred_text)
 
         # print("-" * 80)
         # print(f"Target:  {target_text}\nPredict: {pred_text}")
