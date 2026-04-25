@@ -6,7 +6,7 @@ CEARTIN Machine Project
 
 </div>
 
-This serves as the main Git repository for a Filipino NLP project with RoBERTa.
+This serves as the main Git repository for a Filipino NLP project with ByT5.
 
 ## Setting up
 
